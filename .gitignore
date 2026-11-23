@@ -1,0 +1,15 @@
+node_modules/
+/apps/prototype/
+dist/
+coverage/
+playwright-report/
+test-results/
+.playwright-cli/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+
+Thumbs.db
+.DS_Store

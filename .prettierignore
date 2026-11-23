@@ -1,0 +1,7 @@
+IMPLEMENTATION_PLAN.md
+package-lock.json
+**/dist/
+**/coverage/
+**/playwright-report/
+**/test-results/
+packages/api-contract/generated/

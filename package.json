@@ -1,0 +1,31 @@
+{
+  "name": "ba-anh-em",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@11.13.0",
+  "engines": {
+    "node": ">=24.16.0 <25",
+    "npm": ">=11 <12"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names web,api \"npm run dev --workspace=@ba-anh-em/web\" \"npm run dev --workspace=@ba-anh-em/api\"",
+    "dev:prototype": "npm run dev --workspace=@ba-anh-em/prototype",
+    "lint": "eslint \"apps/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test:unit": "npm run test:unit --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "concurrently": "10.0.7",
+    "eslint": "10.15.0",
+    "prettier": "3.10.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.73.0"
+  }
+}
