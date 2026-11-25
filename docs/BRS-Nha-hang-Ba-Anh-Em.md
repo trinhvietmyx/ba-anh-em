@@ -95,13 +95,13 @@ Các quyền dưới đây là phân công nghiệp vụ dự thảo. Đề bài
 - **Đầu ra.** Thông tin nhận biết món và khả năng đặt trước. Hiển thị giá và mô tả theo dữ liệu được duyệt.
 - **Ngoại lệ và ràng buộc.** Khi món ngừng nhận đặt hoặc dữ liệu thực đơn không truy cập được, nêu đúng tình trạng. Giá, thành phần và thông tin dị ứng chỉ dùng khi có nguồn dữ liệu nhà hàng xác nhận. Tham chiếu BR-06, BR-08 và AC-01.
 
-#### UC-02 · Cập nhật thực đơn qua màn hình quản lý — Tùy chọn
+#### UC-02 · Cập nhật thực đơn qua màn hình quản lý — MVP
 
-- **Tác nhân và tiền điều kiện.** Người được giao duy trì thực đơn, nếu duyệt thao tác cập nhật trực tiếp trên web.
+- **Tác nhân và tiền điều kiện.** Nhân sự được cấp quyền duy trì thực đơn của nhà hàng. Chủ dự án duyệt dùng màn hình `/van-hanh/thuc-don` hiện có cho MVP ngày 25/11/2026.
 - **Đầu vào.** Món cần tạo hoặc sửa và nội dung được phép công bố, bao gồm tình trạng nhận đặt.
 - **Xử lý.** Kiểm tra quyền và tính đầy đủ theo bộ trường đã duyệt, sau đó công bố thay đổi hợp lệ.
 - **Đầu ra.** Thực đơn cập nhật cho các giao dịch mới và dữ liệu tư vấn.
-- **Ngoại lệ và ràng buộc.** Món đã có trong lượt đặt hiện hữu cần giữ khả năng đối chiếu. Cách xử lý khi thay giá hoặc ngừng món thuộc Q-05 và Q-09. MVP cần có nguồn thực đơn duy trì được, còn màn hình quản lý là phương án tùy chọn (AC-20a).
+- **Ngoại lệ và ràng buộc.** Kiểm quyền và dữ liệu ở server. Nếu hai người sửa cùng phiên bản, lần lưu sau nhận xung đột và có thể mở lại dữ liệu. Giữ tên và giá đã ghi của món trong lượt đặt. Cách xử lý dòng món đang sửa sau khi thay giá hoặc ngừng món thuộc Q-05 và Q-09. Tham chiếu AC-20a.
 
 ### M02 · Khung giờ và đặt bàn
 
@@ -354,11 +354,12 @@ Các tình huống dưới đây quy định kết quả cần quan sát trong b
 - **AC-16 · Đặt bàn bằng AI (UC-18).** Kịch bản khách bắt đầu bằng ý định đặt bàn trong chat, bổ sung thông tin còn thiếu rồi hoàn thành các bước theo phạm vi MVP đã duyệt. Đối chiếu mã, khung giờ, số khách, trạng thái trên kết quả khách nhận với quản lý. Với khung vừa hết hoặc lỗi ghi nhận, phản hồi thể hiện tình trạng thực tế.
 - **AC-17 · Vận hành khi lỗi, bảo vệ dữ liệu và chất lượng (NFR-02, NFR-04, NFR-07, NFR-08).** Thử gián đoạn chatbot hoặc thanh toán và kiểm tra thông báo, kênh tiếp tục, trạng thái giao dịch và khả năng đối chiếu sau khôi phục. Kiểm tra dữ liệu riêng tư và thông tin xác thực tích hợp theo phạm vi đã duyệt. Đo hiệu năng và khôi phục theo ngưỡng đã chốt tại Q-14.
 - **AC-18 · Gửi lại sau mất phản hồi (UC-04, UC-09, UC-18, BR-10).** Với thao tác đặt đã ghi nhận nhưng phản hồi bị mất, lần gửi lại được nhận diện là cùng yêu cầu và trả kết quả xác minh được. Hai ý định độc lập được xét theo chính sách nhận đặt và còn chỗ. Thử thêm giao dịch cọc đã ghi nhận bị gửi lại.
-- **AC-19 · Demo và dùng thử tại đơn vị (NV-06).** Mở được đường dẫn công khai. Khách thử thực đơn, đặt bàn, đặt món, cọc và chatbot. Quản lý thử sơ đồ, xử lý đặt chỗ, xem thông tin chuẩn bị bếp và báo cáo. Lưu kết quả dùng thử tại đơn vị và bằng chứng cho các bước chính với dữ liệu được phép sử dụng.
+- **AC-19 · Demo và dùng thử tại đơn vị (NV-06).** Mở được đường dẫn công khai. Khách thử thực đơn, đặt bàn, đặt món, cọc và chatbot. Nhân sự đúng quyền thử cập nhật thực đơn. Quản lý thử sơ đồ, xử lý đặt chỗ, xem thông tin chuẩn bị bếp và báo cáo. Lưu kết quả dùng thử tại đơn vị và bằng chứng cho các bước chính với dữ liệu được phép sử dụng.
+
+- **AC-20a · Quản lý thực đơn (UC-02).** Người đúng quyền tạo, sửa, công bố, ẩn và đổi khả năng nhận đặt trên trang quản lý. Khách và chatbot đọc đúng danh mục mới. Giá và tên món của lượt đã lưu vẫn đối chiếu được. Thử thiếu quyền, lưu từ hai phiên bản giống nhau và gửi lại sau mất phản hồi.
 
 ### 10.2. Tùy chọn và mức Tốt
 
-- **AC-20a · Cập nhật thực đơn (UC-02).** Nếu được duyệt, người đúng quyền sửa thông tin món, khách thấy nội dung mới và dữ liệu món ở lượt đặt đã ghi nhận vẫn có căn cứ đối chiếu.
 - **AC-20b · Khách tra cứu và yêu cầu thay đổi (UC-05).** Nếu được duyệt, khách xác minh quyền và truy cập đúng lượt, gửi được một yêu cầu còn hạn và nhận tình trạng tiếp nhận.
 - **AC-20c · Đổi/hủy từ quản lý (UC-15).** Nếu được duyệt, một yêu cầu hợp lệ cập nhật tình trạng bàn, món và cọc theo chính sách. Kịch bản khung mới hết chỗ giữ nguyên bố trí hiện hữu.
 - **AC-21a · Tiệc/sự kiện (UC-20).** Gửi một yêu cầu với dữ liệu hợp lệ, quản lý xem được và xử lý theo quy trình đã duyệt. Thử tình huống xung đột với lượt có cam kết nếu chức năng có bố trí tài nguyên dùng chung.
@@ -377,7 +378,7 @@ Các tình huống dưới đây quy định kết quả cần quan sát trong b
 6. **Q-06 · Đổi/hủy, đến trễ và không đến.** Trường hợp nào được đổi/hủy, ai yêu cầu và ai quyết định? Mốc ghi nhận không đến, quyền sửa trạng thái và xử lý lại bàn/món là gì? Hoàn, bù trừ, chuyển hoặc giữ cọc trong trường hợp nào và ai phê duyệt? Ảnh hưởng UC-05, UC-10, UC-14, UC-15, BR-09.
 7. **Q-07 · Nhận diện, thông báo và dữ liệu khách.** Khách đặt nhanh hay cần tài khoản? Dùng trường liên hệ và cơ chế xác minh nào? Kết quả được hiển thị trong phiên, tra cứu lại hay gửi qua kênh thông báo nào? Dữ liệu liên hệ hoặc hội thoại nào cần lưu và trong thời hạn nào? Ảnh hưởng UC-04, UC-05, UC-18 và NFR-04.
 8. **Q-08 · Phân công và quyền vận hành.** Ai quản lý thực đơn, lịch, bàn, đặt chỗ, bếp, giao dịch cọc và báo cáo? Vai trò nào cần tài khoản riêng, được xem dữ liệu nào, được sửa trạng thái nào và có cần phê duyệt hoặc đối chiếu chéo? Ảnh hưởng mục 3, M03 đến M07 và AC-12.
-9. **Q-09 · Bộ dữ liệu thực đơn.** Nhà hàng cung cấp các trường nào, gồm giá, mô tả, ảnh, nhóm món, thành phần và thông tin dị ứng nếu có? Món hết được ẩn hay hiển thị trạng thái? Dữ liệu được duy trì bằng cách nào và có cần chức năng cập nhật trên web? Ảnh hưởng UC-01, UC-02, UC-06, UC-17.
+9. **Q-09 · Bộ dữ liệu thực đơn.** Nhà hàng cung cấp bộ dữ liệu ban đầu nào, gồm giá, mô tả, ảnh, nhóm món, thành phần và thông tin dị ứng nếu có? Món hết được ẩn hay hiển thị trạng thái? Màn hình quản lý đã được duyệt cho MVP. Cần chốt nguồn nhập và chính sách công bố. Ảnh hưởng UC-01, UC-02, UC-06, UC-17.
 10. **Q-10 · Chỉ số báo cáo.** Quản lý cần chỉ số, kỳ, bộ lọc và mức chi tiết nào? Từng chỉ số tính theo mốc thời gian, đơn vị và trạng thái nào? Có cần xem chi tiết theo lượt hoặc xuất báo cáo? Ảnh hưởng UC-16 và AC-14.
 11. **Q-11 · Ranh giới thao tác chatbot.** Trong MVP, các bước nào hoàn thành trong chat, cách xác nhận và trả kết quả ra sao, điểm chuyển kênh nào được chấp nhận nếu có? Ở mức Tốt, cấp công cụ nào, điều kiện xác nhận trước thao tác ghi và phạm vi dữ liệu chia sẻ với LLM là gì? Có dùng chatbot để đặt món, cọc, đổi hoặc hủy hay chỉ đặt bàn và tư vấn? Ảnh hưởng UC-17 đến UC-19 và AC-15, AC-16, AC-21c.
 12. **Q-12 · Mức Tốt, đặt tiệc.** Loại tiệc phục vụ, dữ liệu, quy trình phản hồi, thời điểm cam kết tài nguyên, chính sách báo giá và cọc nếu có là gì? Ảnh hưởng UC-20.

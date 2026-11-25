@@ -8,7 +8,7 @@
 
 **Công nghệ đề xuất** — React/Vite, React Router, TanStack Query, NestJS, OpenAPI, PostgreSQL, Kysely và node-postgres, npm workspaces, Playwright, Docker Compose, GitHub Actions và GHCR. Chi tiết ở mục 2.
 
-**Đặc tả nguồn** — [BRS Nhà hàng Ba Anh Em v0.1](../documents/BRS-Nha-hang-Ba-Anh-Em.md), ngày 19/11/2026. BRS là căn cứ về nghiệp vụ. Các lựa chọn kỹ thuật và lịch mục tiêu trong tài liệu này là đề xuất.
+**Đặc tả nguồn** — BRS là căn cứ về nghiệp vụ. NestJS, PostgreSQL 17 và màn hình quản lý thực đơn trong MVP đã được chủ dự án duyệt. [BRS Nhà hàng Ba Anh Em](BRS-Nha-hang-Ba-Anh-Em.md) · [Quyết định kiến trúc](design/BACKEND_ARCHITECTURE.md#10-hồ-sơ-quyết-định-kiến-trúc)
 
 **Hiện trạng khi lập kế hoạch** — Repo ứng dụng chưa có commit hoặc mã nguồn. BRS ở thư mục tài liệu cùng cấp. Tất cả task ở trạng thái chưa thực hiện.
 
@@ -16,8 +16,8 @@
 
 ## 1. Ràng buộc và cách thực thi
 
-- **MVP** gồm thực đơn, đặt bàn theo khung giờ và số khách, đặt món trước, cọc, sơ đồ bàn, quản lý đặt chỗ, báo cáo và chatbot AI đặt bàn, tư vấn món. Website nhận đặt 24/7 theo lịch phục vụ. Bản demo công khai và được dùng thử tại đơn vị.
-- **Mức Tốt** gồm UC-19, UC-20 và UC-21. Khi chọn mục tiêu này, hoàn thành cả ba và nghiệm thu theo AC-21a đến AC-21c. UC-02, UC-05 và UC-15 là tùy chọn riêng. Mở rộng dài hạn nằm ở mục 10.
+- **MVP** gồm quản lý và hiển thị thực đơn, đặt bàn theo khung giờ và số khách, đặt món trước, cọc, sơ đồ bàn, quản lý đặt chỗ, báo cáo và chatbot AI đặt bàn, tư vấn món. Website nhận đặt 24/7 theo lịch phục vụ. Bản demo công khai và được dùng thử tại đơn vị. T29 dùng màn hình quản lý thực đơn hiện có theo quyết định ngày 25/11/2026.
+- **Mức Tốt** gồm UC-19, UC-20 và UC-21. Khi chọn mục tiêu này, hoàn thành cả ba và nghiệm thu theo AC-21a đến AC-21c. UC-05 và UC-15 là tùy chọn riêng. Mở rộng dài hạn nằm ở mục 10.
 - **Nguồn chính sách.** Các Q trong BRS còn mở cho đến khi có câu trả lời được ghi nhận. Xếp `Blocked` cho bước phụ thuộc trực tiếp, vẫn tiếp tục bước đủ đầu vào. Dữ liệu giả lập được đánh dấu, dùng trong local/CI hoặc môi trường thử đã duyệt. Khi xuất hiện mâu thuẫn với BRS, ghi quyết định và ảnh hưởng rồi cập nhật các tài liệu liên quan sau khi được xác nhận.
 - **Ưu tiên.** `P0` là điều kiện của MVP hoặc phát hành an toàn. `P1` là lát cắt MVP có thể xếp sau lõi đặt chỗ và vẫn phải hoàn tất trước nghiệm thu. `P2` là việc thực hiện khi phạm vi tùy chọn hoặc mức Tốt được duyệt.
 - **Thứ tự.** Chạy theo mã tăng dần làm mặc định. Chỉ làm song song task đã đủ phụ thuộc, có đầu ra độc lập và có người chịu trách nhiệm tích hợp. Từ khóa “chốt Q” trong task áp dụng cho phần chính sách cụ thể mà task sử dụng.
@@ -68,6 +68,7 @@ Prefix đề xuất là `/api/v1`. Các tài nguyên dưới đây là ranh gi�
 | Tài nguyên | Hành vi và dữ liệu trao đổi | Task sở hữu |
 | --- | --- | --- |
 | `GET /menu` | Trả thực đơn công bố và khả năng đặt trước. | T09 |
+| `GET /ops/menu`, `POST /ops/menu`, `PUT /ops/menu/{dishId}` | Đọc danh mục vận hành, tạo/sửa món và thay trạng thái theo quyền. Kiểm phiên bản khi sửa. | T29 |
 | `GET /availability` | Nhận ngày/khung và số khách. Trả khả năng nhận đặt, lý do nghiệp vụ và phương án thay thế đã kiểm tra nếu có. | T10 |
 | `POST /reservations` | Nhận ý định đặt đã chuẩn hóa, ngữ cảnh truy cập và khóa thao tác. Trả mã lượt đặt, khung/số khách và tình trạng bàn, cọc, đặt chỗ theo quyền. | T11 |
 | `PUT /reservations/{id}/preorders` | Ghi danh sách món theo phiên bản hiện hành, quyền và quy tắc Q-05. Trả danh sách có hiệu lực và lý do cho phần không ghi nhận. | T13 |
@@ -95,9 +96,9 @@ Quy ước HTTP dự kiến gồm `401` thiếu xác thực, `403` thiếu quy�
 | --- | --- | --- | --- |
 | G0 · Chuẩn bị và thiết kế | T01–T04 | M0 · Phạm vi, prototype, API và mô hình dữ liệu có phiên bản. | Chính sách đã biết có người duyệt. Có thể dựng nền trong lúc Q mở. Chặn từng lát cắt bị ảnh hưởng. |
 | G1 · Môi trường và nền tảng | T05–T08 | M1 · Local và CI chạy từ checkout sạch, có DB, quyền và khung web. | Build, migrate, smoke test và kiểm mẫu phân quyền chạy được. |
-| G2 · MVP theo lát cắt | T09–T22 | M2 · MVP chạy từ đầu đến cuối qua web, chat và quản lý. | Luồng AC-01 đến AC-16 và AC-18 có bằng chứng test phù hợp. AC-17/19 hoàn tất ở G3. |
-| G3 · Kiểm thử, staging, production | T23–T28 | M3 · Release candidate được nghiệm thu ở staging tại T26. M4 · Bản MVP công khai, dùng thử và bàn giao tại T27–T28. | Ma trận AC-01 đến AC-19 đạt, điều kiện phát hành và phương án phục hồi được kiểm tra, đơn vị dùng thử có bằng chứng. |
-| G4 · Phạm vi nâng cao nếu duyệt | T29–T35 | M5 · Tùy chọn được chọn đạt AC-20 tương ứng. Mức Tốt đạt cả ba AC-21 và hồi quy MVP. | T35 phát hành riêng sau MVP. Phần chưa chọn giữ Deferred. |
+| G2 · MVP theo lát cắt | T09–T22, T29 | M2 · MVP chạy từ đầu đến cuối qua web, chat và quản lý. | AC-01 đến AC-16, AC-18 và AC-20a có bằng chứng test phù hợp. AC-17/19 hoàn tất ở G3. |
+| G3 · Kiểm thử, staging, production | T23–T28 | M3 · Release candidate được nghiệm thu ở staging tại T26. M4 · Bản MVP công khai, dùng thử và bàn giao tại T27–T28. | AC-01 đến AC-19 và AC-20a đạt, điều kiện phát hành và phương án phục hồi được kiểm tra, đơn vị dùng thử có bằng chứng. |
+| G4 · Phạm vi nâng cao nếu duyệt | T30–T35 | M5 · Tùy chọn được chọn đạt AC-20b/20c tương ứng. Mức Tốt đạt cả ba AC-21 và hồi quy MVP. | T35 phát hành riêng sau MVP. Phần chưa chọn giữ Deferred. |
 
 **Chuỗi phụ thuộc cần theo dõi sớm** — Q-01 đến Q-04, Q-07, Q-08 và Q-15 → thiết kế lịch, sức chứa, bảo mật → lõi đặt chỗ → phân bàn, cọc và chatbot → kiểm thử liên kênh → staging → production. Đường tích hợp khác cần chạy sớm gồm kiểm tra nguồn VietQR, quyền dùng Groq và thống nhất lịch dùng thử với đơn vị.
 
@@ -261,6 +262,22 @@ Quy ước HTTP dự kiến gồm `401` thiếu xác thực, `403` thiếu quy�
 
 - [ ] Kết quả web khớp nguồn công bố, tình trạng món thể hiện đúng Q-09.
 - [ ] Nguồn đọc dùng được ở tiền đặt món và chatbot qua interface của module.
+
+### T29 — Quản trị thực đơn trên web
+
+**Ưu tiên** P1 · **Tiên quyết** T07, T09 và phân công Q-08, dữ liệu Q-09 · **Đầu vào** Màn hình và form hiện có, quyền cập nhật, trường công bố và quy tắc lịch sử giá/món.
+
+**Mục tiêu** — Nhân sự đúng quyền cập nhật thực đơn từ `/van-hanh/thuc-don` trong MVP.
+
+- [ ] Thêm `listOpsMenu`, `createOpsMenuItem`, `updateOpsMenuItem` với quyền theo nhà hàng, CSRF, idempotency và kiểm phiên bản khi sửa. Ghi log người thực hiện, mã món và kết quả đã lưu.
+- [ ] Nối form hiện có với cache vận hành riêng. Cập nhật dữ liệu công khai sau khi lưu. Chatbot đọc danh mục đã công bố. Lượt đã lưu giữ tên và giá áp dụng.
+- [ ] Kiểm sai quyền, chỉnh đồng thời, gửi lại sau mất phản hồi và dừng nhận món. T22 đối chiếu snapshot của lượt cũ sau khi đã nối đặt món.
+
+**Đầu ra** — Màn hình quản trị thực đơn kết nối API, schema có phiên bản và bằng chứng AC-20a. [Thiết kế API](design/BACKEND_OPENAPI.yaml)
+
+**Checklist nghiệm thu**
+
+- [ ] Người có quyền tạo, sửa, công bố, ẩn và đổi khả dụng. Website và chatbot đọc đúng trạng thái công bố. Một lệnh ghi chỉ có một hiệu lực và lượt cũ vẫn đối chiếu được.
 
 ### T10 — Tính khả dụng theo lịch, thời gian và sức chứa
 
@@ -469,19 +486,19 @@ Quy ước HTTP dự kiến gồm `401` thiếu xác thực, `403` thiếu quy�
 
 ### T22 — Tích hợp toàn bộ luồng MVP và kiểm thử xuyên module
 
-**Ưu tiên** P0 · **Tiên quyết** T09 đến T21, chính sách MVP dùng trong kịch bản đã chốt · **Đầu vào** Các lát cắt, fixture và ma trận AC.
+**Ưu tiên** P0 · **Tiên quyết** T09 đến T21 và T29, chính sách MVP dùng trong kịch bản đã chốt · **Đầu vào** Các lát cắt, fixture và ma trận AC.
 
 **Mục tiêu** — Hoàn tất các bước liên miền và xác nhận một lượt đặt đi đúng quy trình đến báo cáo.
 
 - [ ] Nối luồng web/chat, món, cọc theo các mốc xác nhận đã duyệt. Bảo đảm các điều kiện món/cọc bắt buộc nằm ở lệnh kiểm tra chung. Kiểm tra audit và đồng bộ lại UI sau ghi.
-- [ ] Viết Playwright cho đặt bàn web và chat, món, cọc, sơ đồ, phục vụ, bếp, báo cáo. Dùng DB thật và adapter giả xác định được kết quả, tách kiểm tích hợp thật ở T26.
+- [ ] Viết Playwright cho đặt bàn web và chat, quản lý thực đơn, chọn món, cọc, sơ đồ, phục vụ, bếp, báo cáo. Dùng DB thật và adapter giả xác định được kết quả, tách kiểm tích hợp thật ở T26. Kiểm đổi giá/công bố món và đối chiếu snapshot của lượt trước đó.
 - [ ] Chạy integration test tranh chỗ cuối ở đúng mốc cam kết, đổi bàn lỗi, mất phản hồi sau commit, QR chưa xác minh, mất dữ liệu phản hồi đối chiếu và khoản cọc trễ sau khi bàn đã cấp.
 
 **Đầu ra** — Các luồng hoàn chỉnh, `tests/e2e/` và báo cáo bằng chứng M2.
 
 **Checklist nghiệm thu**
 
-- [ ] AC-01 đến AC-16 và AC-18 có ca kiểm tương ứng, các ca apply trong fixture đạt kết quả và có mã tham chiếu đối chiếu.
+- [ ] AC-01 đến AC-16, AC-18 và AC-20a có ca kiểm tương ứng. Các ca áp dụng trong fixture đạt kết quả và có mã tham chiếu đối chiếu.
 - [ ] Tất cả kênh dùng đúng quyền và cùng nguồn trạng thái. CI tái hiện được từ dữ liệu thử độc lập.
 
 ## 7. G3 — Kiểm thử phát hành, triển khai và vận hành
@@ -553,7 +570,7 @@ Quy ước HTTP dự kiến gồm `401` thiếu xác thực, `403` thiếu quy�
 
 **Checklist nghiệm thu**
 
-- [ ] AC-01 đến AC-18 đạt trong phạm vi áp dụng. AC-19 được diễn tập trên staging và sẵn dữ liệu/kịch bản để xác minh trên URL công khai.
+- [ ] AC-01 đến AC-18 và AC-20a đạt trong phạm vi áp dụng. AC-19 được diễn tập trên staging và sẵn dữ liệu/kịch bản để xác minh trên URL công khai.
 - [ ] Không còn lỗi chặn trong các luồng bắt buộc. Có bằng chứng cho cả Groq và hướng xác minh VietQR đã chốt.
 
 ### T27 — Phát hành production và dùng thử tại nhà hàng
@@ -591,22 +608,6 @@ Quy ước HTTP dự kiến gồm `401` thiếu xác thực, `403` thiếu quy�
 - [ ] Có dấu hiệu nhận biết mức ổn định đã duyệt và danh sách vấn đề tồn đọng có người phụ trách.
 
 ## 8. G4 — Tùy chọn và mức Tốt sau MVP
-
-### T29 — Quản trị thực đơn trên web nếu duyệt
-
-**Ưu tiên** P2 · **Tiên quyết** T28, Q-08/Q-09 và UC-02 được duyệt · **Đầu vào** Quyền cập nhật, trường hiển thị và quy tắc lịch sử giá/món.
-
-**Mục tiêu** — Người phụ trách tự cập nhật thực đơn công bố.
-
-- [ ] Thêm route/DTO vận hành, form và lệnh cập nhật có kiểm quyền, audit và version check khi cần.
-- [ ] Làm mới dữ liệu menu và chatbot theo phiên bản công bố. Giữ tham chiếu hoặc giá áp dụng của lượt đã ghi theo Q-05.
-- [ ] Thử sai quyền, chỉnh đồng thời, món ngừng nhận và đọc lại lượt có món cũ.
-
-**Đầu ra** — Màn hình quản trị thực đơn, endpoint và bằng chứng AC-20a.
-
-**Checklist nghiệm thu**
-
-- [ ] Người có quyền cập nhật được món, khách thấy nội dung mới và lượt cũ vẫn đối chiếu được.
 
 ### T30 — Khách truy cập lại và yêu cầu thay đổi nếu duyệt
 
@@ -695,7 +696,7 @@ Quy ước HTTP dự kiến gồm `401` thiếu xác thực, `403` thiếu quy�
 
 **Mục tiêu** — Phát hành riêng tính năng nâng cao với đường hồi quy và khôi phục.
 
-- [ ] Trên staging, chạy AC-20 tương ứng, hoặc cả ba AC-21 khi chọn mức Tốt. Chạy lại AC-01 đến AC-19 có liên quan và hồi quy toàn bộ luồng cốt lõi. Kiểm tra migration dùng dữ liệu hiện hữu.
+- [ ] Trên staging, chạy AC-20b/20c theo chức năng đã duyệt hoặc cả ba AC-21 khi chọn mức Tốt. Chạy lại AC-01 đến AC-19 và AC-20a có liên quan cùng hồi quy luồng cốt lõi. Kiểm tra migration dùng dữ liệu hiện hữu.
 - [ ] Rà phân quyền, độ tương thích và phương án tắt tính năng hoặc quay phiên bản khi phù hợp. Dùng lại quy trình artifact, migrate, smoke và bàn giao của T25–T28.
 - [ ] Cập nhật ma trận truy vết, tài liệu tác nghiệp, ghi biên bản và phiên bản phát hành M5.
 
@@ -720,7 +721,7 @@ T01 tạo bản ghi chính thức. Mỗi quyết định lưu phiên bản, ngư
 | Q-06 | Quyền đổi/hủy, đến trễ, không đến, sửa nhầm và chính sách hoàn/bù trừ/chuyển/giữ cọc. | T04 hoàn thiện ma trận liên quan trước T15, T18. T30 và T31 nếu được chọn. |
 | Q-07 | Tài khoản hay khách đặt nhanh, liên hệ, xác minh, kênh kết quả và quy tắc lưu. | T03 chốt biên truy cập trước T07, T11, T12, T20, T21. T23 kiểm dữ liệu. |
 | Q-08 | Người quản lý từng mảng, quyền xem/ghi, phân công, phê duyệt và trách nhiệm đối chiếu. | T03 chốt quyền thực tế trước T07 và task vận hành tương ứng T14–T19. |
-| Q-09 | Trường thực đơn chính thức, cách công bố, ngừng nhận, nguồn nhập và quản trị web nếu duyệt. | T09 cần dữ liệu và quy tắc. T13, T20 dùng chung; T29 nếu được chọn. |
+| Q-09 | Trường thực đơn chính thức, cách công bố, ngừng nhận và nguồn nhập. Màn hình quản lý web đã duyệt. | T09 và T29 cần dữ liệu và quy tắc. T13 và T20 dùng chung. |
 | Q-10 | Chỉ số báo cáo, mốc kỳ, công thức, bộ lọc, mức chi tiết và xuất dữ liệu nếu duyệt. | T19 dùng để viết truy vấn, fixture tính tay và tiêu chí. |
 | Q-11 | Mức thao tác MVP trong chat, xác nhận, điểm chuyển kênh, dữ liệu dùng cho LLM, danh sách tool mức Tốt. | T03 chốt ranh giới; T20 và T21 cần phạm vi tương ứng. T34 khi chọn mức Tốt. |
 | Q-12 | Phạm vi tiệc, xét duyệt, cam kết tài nguyên, báo giá, cọc. | T32. |
@@ -739,7 +740,7 @@ Các task trong cột thực hiện có trách nhiệm tạo hoặc kết nối 
 | Use case hoặc tiêu chí xuyên hệ thống | Phạm vi | Task thực hiện | Tiêu chí | Nơi tổng hợp bằng chứng |
 | --- | --- | --- | --- | --- |
 | UC-01 · Xem thực đơn | MVP | T09 | AC-01 | T22, T26 |
-| UC-02 · Quản trị thực đơn web | Tùy chọn | T29 | AC-20a | T35 |
+| UC-02 · Quản trị thực đơn web | MVP | T29 | AC-20a | T22, T26, T27 |
 | UC-03 · Kiểm tra khung theo số khách | MVP | T10, T12 | AC-02 | T22, T26, T27 |
 | UC-04 · Ghi nhận lượt đặt | MVP | T11, T12, T14 | AC-03, AC-04, AC-18 | T22, T26 |
 | UC-05 · Khách tra cứu và xin thay đổi | Tùy chọn | T30 | AC-20b | T35 |
@@ -793,7 +794,7 @@ Các task trong cột thực hiện có trách nhiệm tạo hoặc kết nối 
 | NV-01 | Web và back-end API | T03, T05–T08, T25, T27. M1 và AC-19. |
 | NV-02 | Chatbot AI đặt bàn, tư vấn món | T20–T22, T26. AC-15, AC-16. |
 | NV-03 | Nhà hàng, nhận đặt 24/7, món/cọc, bố trí và bếp | T10–T18, T22, T27. AC ở mục 10.1, kiểm ngoài giờ phục vụ. |
-| NV-04 | Danh mục MVP | T09–T22. M2 và ma trận AC mục 10.1. |
+| NV-04 | Danh mục MVP | T09–T22 và T29. M2 và ma trận AC mục 10.1. |
 | NV-05 | Ba chức năng mức Tốt | T32–T35. AC-21a, AC-21b, AC-21c. |
 | NV-06 | Demo công khai và dùng thử tại đơn vị | T25–T28. M3, M4 và AC-19. |
 | NV-07 | Groq free, VietQR | T03, T17, T18, T20, T21, T26. Bằng chứng cấu hình và chạy tích hợp đã duyệt. |

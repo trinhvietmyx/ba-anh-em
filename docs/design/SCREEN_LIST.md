@@ -2,7 +2,7 @@
 
 **Bản 0.1 · 19/11/2026 · Đề xuất thiết kế**
 
-Mã màn hình dùng xuyên suốt bộ thiết kế. Route là địa chỉ frontend đề xuất, panel dùng chung route của màn hình cha. Đặc tả bố cục và hành vi chi tiết nằm ở [UI_UX_SPECIFICATION.md](UI_UX_SPECIFICATION.md). Nguồn truy vết là [BRS](../../../documents/BRS-Nha-hang-Ba-Anh-Em.md) và [kế hoạch triển khai](../IMPLEMENTATION_PLAN.md).
+Mã màn hình dùng xuyên suốt bộ thiết kế. Route là địa chỉ frontend đề xuất, panel dùng chung route của màn hình cha. OPT-01 đã được duyệt cho MVP và giữ mã để truy vết prototype. [Đặc tả UI/UX](UI_UX_SPECIFICATION.md) · [BRS](../BRS-Nha-hang-Ba-Anh-Em.md) · [Kế hoạch triển khai](../IMPLEMENTATION_PLAN.md)
 
 ## 1. Màn hình MVP
 
@@ -23,6 +23,7 @@ Mã màn hình dùng xuyên suốt bộ thiết kế. Route là địa chỉ fro
 | OPS-05 · Chuẩn bị bếp                 | Quản lý hoặc bếp theo Q-08 · `/van-hanh/chuan-bi-bep` hoặc vùng trong OPS-03       | Xem món cần chuẩn bị và thay đổi sau chốt nếu có.                     | UC-07 · AC-06                                                               | T16, T22                  |
 | OPS-06 · Đối chiếu cọc                | Người đối chiếu được phân quyền · `/van-hanh/dat-coc`, danh sách và panel chi tiết | Kiểm bằng chứng, xử lý sai lệch và kết quả cọc.                       | UC-09, UC-10 · AC-08, AC-09, AC-13, AC-17, AC-18                            | T18, T22–T24              |
 | OPS-07 · Báo cáo                      | Quản lý/người có quyền · `/van-hanh/bao-cao`                                       | Chọn kỳ và đọc chỉ số được duyệt.                                     | UC-16 · AC-14                                                               | T19, T22                  |
+| OPT-01 · Quản trị thực đơn            | Nhân sự được cấp quyền · `/van-hanh/thuc-don`                                      | Tạo/sửa món, công bố/ẩn và đổi khả dụng.                              | UC-02 · AC-20a                                                              | T29, T22                  |
 | SYS-01 · Phục hồi và quyền truy cập   | Khách/nhân sự · trạng thái dùng chung trong route có liên quan                     | Thử lại phù hợp, đăng nhập lại hoặc trở về màn hình đủ quyền.         | NFR-02, NFR-04, NFR-08 · AC-12, AC-17, AC-18                                | T07–T08, T22–T24          |
 
 ## 2. Màn hình tùy chọn
@@ -31,7 +32,6 @@ Chỉ đưa vào sitemap vận hành khi use case tương ứng được duyệt
 
 | Mã · Màn hình                        | Tác nhân và điểm vào                   | Hành động chính                                                | BRS · Nghiệm thu | Task |
 | ------------------------------------ | -------------------------------------- | -------------------------------------------------------------- | ---------------- | ---- |
-| OPT-01 · Quản trị thực đơn           | Người được giao · `/van-hanh/thuc-don` | Cập nhật dữ liệu công bố theo quyền.                           | UC-02 · AC-20a   | T29  |
 | OPT-02 · Tra cứu và yêu cầu thay đổi | Khách đã xác minh · `/tra-cuu-dat-cho` | Truy cập đúng lượt và gửi yêu cầu trong điều kiện cho phép.    | UC-05 · AC-20b   | T30  |
 | OPT-03 · Quyết định đổi/hủy          | Người có quyền · panel trong OPS-03    | Kiểm tác động, áp dụng quyết định và xem trạng thái sau xử lý. | UC-15 · AC-20c   | T31  |
 

@@ -1,0 +1,3228 @@
+openapi: '3.1.1'
+info:
+  title: 'Nhà hàng Ba Anh Em API'
+  version: '0.3.1-draft'
+  description: 'Bản thiết kế Giai đoạn 3 gồm 15 thao tác tiếp nối outline, 9 thao tác kết nối, 3 thao tác quản lý thực đơn trong MVP và 1 thao tác có điều kiện. Các x-policy-questions trỏ tới BRS. Màn hình và route Frontend hiện có là chuẩn tích hợp.'
+servers:
+  - url: '/api/v1'
+    description: 'Cùng origin với web.'
+paths:
+  '/guest/session':
+    post:
+      operationId: establishGuestSession
+      tags:
+        - 'Phiên khách'
+      summary: 'Thiết lập hoặc phục hồi phiên khách'
+      description: 'Gọi trước lệnh ghi đặt chỗ đầu tiên. Giữ phiên đang hợp lệ khi tải lại. Bắt buộc Origin thuộc danh sách origin của ứng dụng. Không trả danh sách lượt hoặc dữ liệu liên hệ.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-07
+        - Q-15
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      responses:
+        '200':
+          description: 'Phiên khách đã sẵn sàng. Cookie được đặt nếu tạo mới.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Set-Cookie:
+              description: 'Cookie phiên hoặc cookie giao dịch đăng nhập. Các thuộc tính phụ thuộc HTTPS môi trường.'
+              schema:
+                type: string
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/GuestSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/guest/reservation-attempts':
+    get:
+      operationId: getReservationAttempt
+      tags:
+        - 'Đặt chỗ'
+      summary: 'Đọc kết quả lần tạo lượt khi chưa nhận mã'
+      description: 'Dùng khóa lần gửi ban đầu và đúng phiên khách. Chỉ đọc kết quả đã commit cho createReservation mà phiên còn quyền xem. Nếu chưa có kết quả trong phạm vi phiên, trả 404. Phản hồi này cũng có thể xuất hiện khi lệnh đang xử lý. Giữ cùng khóa khi thử lại và không tạo lượt trong thao tác đọc.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-07
+        - Q-15
+      security:
+        - GuestCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 'Kết quả hiện hành của lượt đã tạo trong phạm vi phiên khách.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/AttemptUnavailable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/auth/login':
+    get:
+      operationId: beginStaffLogin
+      tags:
+        - 'Phiên vận hành'
+      summary: 'Bắt đầu đăng nhập nhân sự'
+      description: 'Điều hướng trình duyệt qua OIDC Authorization Code với PKCE. Server chỉ nhận đường dẫn vận hành cùng origin trong danh sách cho phép và kiểm quyền khi trở về.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-08
+      security: []
+      parameters:
+        - name: returnTo
+          in: query
+          description: 'Đường dẫn tương đối thuộc khu vực vận hành.'
+          required: false
+          schema:
+            type: string
+            maxLength: 512
+      responses:
+        '302':
+          description: 'Chuyển sang IdP.'
+          headers:
+            Location:
+              description: 'Địa chỉ HTTPS của IdP hoặc đường dẫn vận hành hợp lệ cùng origin.'
+              schema:
+                type: string
+                format: uri-reference
+            Set-Cookie:
+              description: 'Cookie phiên hoặc cookie giao dịch đăng nhập. Các thuộc tính phụ thuộc HTTPS môi trường.'
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/auth/callback':
+    get:
+      operationId: finishStaffLogin
+      tags:
+        - 'Phiên vận hành'
+      summary: 'Hoàn thành đăng nhập nhân sự'
+      description: 'IdP trả code và state hoặc kết quả từ chối đăng nhập. Backend xác thực giao dịch, ánh xạ tài khoản và chỉ cấp phiên cho nhân sự hợp lệ.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-08
+      security: []
+      parameters:
+        - name: code
+          in: query
+          description: 'Authorization code từ IdP.'
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: state
+          in: query
+          description: 'Mã chống giả mạo và gắn giao dịch OIDC.'
+          required: false
+          schema:
+            type: string
+            maxLength: 512
+        - name: error
+          in: query
+          description: 'Mã kết quả từ chối do IdP trả.'
+          required: false
+          schema:
+            type: string
+            maxLength: 160
+      responses:
+        '303':
+          description: 'Đã đăng nhập và chuyển về đường dẫn an toàn.'
+          headers:
+            Location:
+              description: 'Địa chỉ HTTPS của IdP hoặc đường dẫn vận hành hợp lệ cùng origin.'
+              schema:
+                type: string
+                format: uri-reference
+            Set-Cookie:
+              description: 'Cookie phiên hoặc cookie giao dịch đăng nhập. Các thuộc tính phụ thuộc HTTPS môi trường.'
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/session':
+    get:
+      operationId: getStaffSession
+      tags:
+        - 'Phiên vận hành'
+      summary: 'Đọc phiên nhân sự hiện tại'
+      description: 'Trả quyền từ server và nhãn vai trò tương thích OpsLayout. Nhãn hiển thị không cấp quyền tác nghiệp.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-08
+      security:
+        - StaffCookie: []
+      responses:
+        '200':
+          description: 'Phiên và quyền được cấp.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/StaffSession'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: endStaffSession
+      tags:
+        - 'Phiên vận hành'
+      summary: 'Đăng xuất khỏi khu vực vận hành'
+      description: 'Thu hồi phiên tại ứng dụng và hết hạn cookie. Frontend bỏ cache vận hành cũ sau khi xác nhận hoặc nhận phiên đã hết.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-08
+      security:
+        - StaffCookie: []
+          CsrfToken: []
+      responses:
+        '204':
+          description: 'Đã đăng xuất và xóa cookie phiên.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Set-Cookie:
+              description: 'Cookie phiên hoặc cookie giao dịch đăng nhập. Các thuộc tính phụ thuộc HTTPS môi trường.'
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/menu':
+    get:
+      operationId: listPublishedMenu
+      tags:
+        - 'Thực đơn'
+      summary: 'Đọc thực đơn đã công bố'
+      description: 'Danh sách hữu hạn của nhà hàng, theo thứ tự hiển thị rồi mã món. Trả trạng thái khả dụng riêng với trạng thái công bố. Frontend tiếp tục lọc và tìm trong danh sách đã tải.'
+      x-policy-questions:
+        - Q-09
+      security: []
+      responses:
+        '200':
+          description: 'Thực đơn công bố. items rỗng khi chưa có món.'
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/MenuResponse'
+              example:
+                items:
+                  - id: ga-nuong-la-chanh
+                    name: 'Gà nướng lá chanh'
+                    category: 'Món nướng'
+                    price: 329000
+                    description: ''
+                    image: '/images/menu/ga.webp'
+                    available: true
+                    published: true
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/availability':
+    get:
+      operationId: getAvailability
+      tags:
+        - 'Đặt chỗ'
+      summary: 'Kiểm tra khả dụng của ngày và số khách'
+      description: 'Trả các khung server đã kiểm cho ngày. Tham số time ưu tiên đánh giá khung được chọn và vẫn trả các khung thay thế có căn cứ. Kết quả phản ánh tại thời điểm đọc và được kiểm lại khi ghi.'
+      x-policy-questions:
+        - Q-01
+        - Q-02
+        - Q-03
+      security: []
+      parameters:
+        - name: date
+          in: query
+          description: 'Ngày địa phương của nhà hàng.'
+          required: true
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: guests
+          in: query
+          description: 'Số khách. Giới hạn nhận đặt phụ thuộc Q-01.'
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2147483647
+        - name: time
+          in: query
+          description: 'Giờ địa phương của nhà hàng. Bỏ qua để đọc cả ngày nếu thao tác cho phép.'
+          required: false
+          schema:
+            $ref: '#/components/schemas/Time'
+      responses:
+        '200':
+          description: 'Khung còn chỗ hoặc lý do không khả dụng.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/reservations':
+    post:
+      operationId: createReservation
+      tags:
+        - 'Đặt chỗ'
+      summary: 'Ghi nhận ý định đặt bàn đã xác nhận'
+      description: 'Cấp quyền lượt trong cùng transaction với lượt và khóa thao tác. Server xác định nguồn web hoặc chat từ chatContext hợp lệ, kiểm lại khả dụng và dùng chính sách được duyệt. Gửi lại cùng khóa sau mất phản hồi trả cùng mã trong quyền hiện tại.'
+      x-policy-questions:
+        - Q-01
+        - Q-02
+        - Q-03
+        - Q-07
+        - Q-11
+        - Q-15
+      security:
+        - GuestCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/NewReservation'
+            example:
+              date: '2026-12-05'
+              time: '18:00'
+              guests: 4
+              contact:
+                name: 'Khách mẫu'
+                phone: '0900000001'
+      responses:
+        '201':
+          description: 'Đã ghi nhận lượt hoặc phát lại kết quả của cùng lần tạo.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/GuestReservation'
+              example:
+                id: BAE-1044
+                date: '2026-12-05'
+                time: '18:00'
+                startsAt: '2026-12-05T11:00:00Z'
+                endsAt: '2026-12-05T12:30:00Z'
+                guests: 4
+                source: web
+                status: pending
+                statusReason: null
+                version: 1
+                tables: []
+                items: []
+                preorderTotal: 0
+                deposit: null
+                nextActions:
+                  - edit_preorder
+                  - request_deposit
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/reservations/{id}':
+    get:
+      operationId: getGuestReservation
+      tags:
+        - 'Đặt chỗ'
+      summary: 'Đọc lượt thuộc phiên khách'
+      description: 'Phục hồi trang kết quả, chọn món và cọc theo mã lượt trong phạm vi phiên đã có quyền. Dùng mã lượt từ ngữ cảnh hiện có, không tìm theo điện thoại. Thiếu quyền trên lượt trả 404 theo chính sách che tồn tại.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-07
+        - Q-15
+      security:
+        - GuestCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: 'Kết quả có thể hiển thị cho khách.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/GuestReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/reservations/{id}/preorders':
+    put:
+      operationId: replacePreorder
+      tags:
+        - 'Đặt món'
+      summary: 'Ghi danh sách món đặt trước'
+      description: 'Kiểm phiên bản, quyền và hạn chọn. So với dòng đã lưu trước khi kiểm khả dụng. Theo phương án chờ Q-05/Q-09, thêm hoặc tăng chỉ áp dụng cho món đang công bố và nhận đặt, còn giữ nguyên hoặc giảm dòng đã lưu có thể giữ snapshot dù món đã ẩn hoặc hết. Server xác định giá. Mảng rỗng yêu cầu xóa theo chính sách. rejectedItems chỉ có dữ liệu nếu duyệt xử lý một phần.'
+      x-policy-questions:
+        - Q-05
+        - Q-07
+        - Q-09
+      security:
+        - GuestCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PreorderInput'
+            example:
+              expectedVersion: 1
+              items:
+                - dishId: ga-nuong-la-chanh
+                  quantity: 2
+      responses:
+        '200':
+          description: 'Danh sách món và phiên bản lượt có hiệu lực.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/PreorderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/reservations/{id}/deposits':
+    post:
+      operationId: createOrGetDeposit
+      tags:
+        - 'Đặt cọc'
+      summary: 'Cấp hoặc đọc lại khoản cọc đang hiệu lực'
+      description: 'Lượt, số tiền và người nhận được xác định bởi server. Body rỗng. Cấp mới khi đủ điều kiện, nếu khoản hiện hành có thể dùng thì trả lại. Chuẩn bị VietQR theo tham chiếu đã lưu.'
+      x-policy-questions:
+        - Q-03
+        - Q-04
+        - Q-07
+        - Q-15
+      security:
+        - GuestCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 'Khoản hiện hành có thể dùng.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DepositView'
+        '201':
+          description: 'Đã ghi khoản cọc mới.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DepositView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/reservations/{id}/deposits/{depositId}':
+    get:
+      operationId: getGuestDeposit
+      tags:
+        - 'Đặt cọc'
+      summary: 'Đọc VietQR và trạng thái cọc'
+      description: 'Kiểm cả quyền với lượt và quan hệ khoản cọc thuộc lượt. QR và thông tin chuyển chỉ trả khi còn được thanh toán. Lệnh đọc không xác nhận chuyển tiền.'
+      x-policy-questions:
+        - Q-03
+        - Q-04
+        - Q-07
+      security:
+        - GuestCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/DepositId'
+      responses:
+        '200':
+          description: 'Thông tin và trạng thái cọc trong phạm vi khách.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DepositView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/reservations/{id}/deposits/{depositId}/notices':
+    post:
+      operationId: reportDepositTransfer
+      tags:
+        - 'Đặt cọc'
+      summary: 'Thông báo đã chuyển khoản'
+      description: 'Ánh xạ nút Báo đã chuyển hiện có nếu Q-04 duyệt dùng. Body rỗng. Chỉ ghi thông báo của khách, không xác minh tiền hoặc xác nhận bàn. Gửi lặp chỉ trả lại kết quả hợp lệ của cùng thông báo.'
+      x-design-status: conditional
+      x-policy-questions:
+        - Q-04
+        - Q-07
+      security:
+        - GuestCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/DepositId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 'Đã tiếp nhận thông báo hoặc đã ghi từ trước.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/DepositView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/menu':
+    get:
+      operationId: listOpsMenu
+      tags:
+        - 'Thực đơn'
+      summary: 'Đọc danh mục món cho màn hình quản lý thực đơn'
+      description: 'Trả cả món công bố và món ẩn của nhà hàng do server xác định. Sắp thứ tự hiển thị rồi mã món. Màn hình hiện có tìm tên/nhóm, lọc và đếm món công bố trên danh mục đã tải.'
+      x-policy-questions:
+        - Q-08
+        - Q-09
+      x-permissions:
+        - menu.read
+      security:
+        - StaffCookie: []
+      responses:
+        '200':
+          description: 'Danh mục vận hành và phiên bản từng món.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsMenuResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    post:
+      operationId: createOpsMenuItem
+      tags:
+        - 'Thực đơn'
+      summary: 'Thêm món bằng form quản lý thực đơn'
+      description: 'Server cấp mã món ổn định và xác định nhà hàng từ phạm vi của phiên. Cần mô tả khi tạo mới. Món ẩn chỉ xuất hiện trong phạm vi vận hành. Gửi lại cùng khóa và payload không tạo thêm món.'
+      x-policy-questions:
+        - Q-08
+        - Q-09
+      x-permissions:
+        - menu.read
+        - menu.write
+      security:
+        - StaffCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/CreateMenuItemInput'
+            example:
+              name: 'Gà nướng lá chanh'
+              category: 'Món nướng'
+              price: 329000
+              description: 'Gà nướng thơm lá chanh.'
+              available: true
+              published: false
+      responses:
+        '201':
+          description: 'Món đã lưu hoặc kết quả phát lại của lần tạo.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsMenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/menu/{dishId}':
+    put:
+      operationId: updateOpsMenuItem
+      tags:
+        - 'Thực đơn'
+      summary: 'Lưu thông tin, công bố và khả dụng của món'
+      description: 'Cập nhật toàn bộ trường của form trong phạm vi nhà hàng sau khi khớp expectedVersion. Mô tả có thể để trống nếu món hiện chưa có mô tả. Mã món, ảnh và snapshot của dòng món đã lưu không bị ghi đè. Xử lý gửi lại cùng khóa trước khi kiểm phiên bản.'
+      x-policy-questions:
+        - Q-05
+        - Q-08
+        - Q-09
+      x-permissions:
+        - menu.read
+        - menu.write
+      security:
+        - StaffCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/MenuDishId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UpdateMenuItemInput'
+            example:
+              expectedVersion: 1
+              item:
+                name: 'Gà nướng lá chanh'
+                category: 'Món nướng'
+                price: 349000
+                description: 'Gà nướng thơm lá chanh.'
+                available: true
+                published: true
+      responses:
+        '200':
+          description: 'Món hiện hành và phiên bản sau khi lưu.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsMenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/reservations':
+    get:
+      operationId: listOpsReservations
+      tags:
+        - 'Vận hành'
+      summary: 'Đọc danh sách lượt đặt'
+      description: 'Sắp startsAt tăng dần rồi định danh nội bộ. Khi không có q, date mặc định theo ngày nhà hàng nếu bỏ qua. Khi có q, bỏ ràng buộc ngày như màn hình hiện tại, vẫn áp dụng time và status nếu có. q tìm chuỗi con trong mã. Danh sách không chứa liên hệ.'
+      x-policy-questions:
+        - Q-01
+        - Q-08
+      x-permissions:
+        - reservations.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - name: date
+          in: query
+          description: 'Ngày dùng bữa địa phương, bỏ qua khi tra q.'
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: time
+          in: query
+          description: 'Giờ địa phương của nhà hàng. Bỏ qua để đọc cả ngày nếu thao tác cho phép.'
+          required: false
+          schema:
+            $ref: '#/components/schemas/Time'
+        - name: status
+          in: query
+          description: 'Lọc theo trạng thái lượt.'
+          required: false
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+        - name: q
+          in: query
+          description: 'Tìm theo một phần mã lượt, không phân biệt hoa thường.'
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+            minLength: 1
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 'Danh sách có phân trang cursor.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsReservationsPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/reservations/{id}':
+    get:
+      operationId: getOpsReservation
+      tags:
+        - 'Vận hành'
+      summary: 'Đọc chi tiết lượt đặt'
+      description: 'Thông tin liên hệ chỉ có với quyền reservations.read_contact. Lịch sử chỉ có với reservations.read_audit và phạm vi nội dung được duyệt. Các tác vụ khả dụng theo quyền và trạng thái hiện tại.'
+      x-policy-questions:
+        - Q-06
+        - Q-08
+      x-permissions:
+        - reservations.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: 'Chi tiết theo projection của nhân sự.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/reservations/{id}/service-events':
+    post:
+      operationId: recordServiceEvent
+      tags:
+        - 'Vận hành'
+      summary: 'Ghi nhận sự kiện phục vụ'
+      description: 'Lệnh chuyên biệt có version và khóa gửi lại. Server kiểm trạng thái nguồn và điều kiện no-show. Hành động mark_no_show yêu cầu confirmNoShow bằng true. Kết quả và dấu vết được lưu cùng transaction.'
+      x-policy-questions:
+        - Q-03
+        - Q-06
+        - Q-08
+      x-permissions:
+        - reservations.read
+        - reservations.write_events
+      security:
+        - StaffCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ServiceEventInput'
+            example:
+              action: mark_arrived
+              expectedVersion: 3
+      responses:
+        '201':
+          description: 'Đã ghi sự kiện, trả lại lượt có hiệu lực theo quyền.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/floorplan':
+    get:
+      operationId: getFloorplan
+      tags:
+        - 'Sơ đồ bàn'
+      summary: 'Đọc sơ đồ theo giờ và khu'
+      description: 'Trả khu, bàn và lượt có thể xem theo phạm vi quyền. Trạng thái bàn dựa trên khoảng sử dụng. Lượt ứng viên cùng khung hiển thị mà không trả thông tin liên hệ.'
+      x-policy-questions:
+        - Q-01
+        - Q-02
+        - Q-08
+      x-permissions:
+        - floorplan.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - name: date
+          in: query
+          description: 'Ngày địa phương của nhà hàng.'
+          required: true
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: time
+          in: query
+          description: 'Giờ địa phương của nhà hàng.'
+          required: true
+          schema:
+            $ref: '#/components/schemas/Time'
+        - name: area
+          in: query
+          description: 'Mã khu. Bỏ qua để đọc toàn bộ khu.'
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+            minLength: 1
+      responses:
+        '200':
+          description: 'Sơ đồ và ứng viên của giờ đã chọn.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/FloorResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/reservations/{id}/allocation':
+    put:
+      operationId: replaceAllocation
+      tags:
+        - 'Sơ đồ bàn'
+      summary: 'Ghi phương án bố trí bàn'
+      description: 'Thay bố trí trong một giao dịch sau khi kiểm version lượt, quyền, sức chứa và xung đột. Server lấy khoảng sử dụng từ lượt và chính sách. Thay đổi thất bại giữ phương án trước.'
+      x-policy-questions:
+        - Q-01
+        - Q-02
+        - Q-03
+        - Q-08
+      x-permissions:
+        - floorplan.read
+        - floorplan.allocate
+      security:
+        - StaffCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/AllocationInput'
+            example:
+              expectedVersion: 2
+              tableCodes:
+                - A03
+      responses:
+        '200':
+          description: 'Thông tin lượt và bố trí mới, không kèm liên hệ.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ReservationSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/kitchen/preparations':
+    get:
+      operationId: getKitchenPreparations
+      tags:
+        - 'Bếp'
+      summary: 'Đọc danh sách cần chuẩn bị'
+      description: 'Trả phiếu món theo giờ và mã lượt. Lọc phiếu có thay đổi sau mốc Q-05 nếu yêu cầu. Dữ liệu liên hệ được loại khỏi phản hồi. Deltas phản ánh món hoặc lượng thay đổi sau mốc đã duyệt, gồm cả trường hợp món bị bỏ hết.'
+      x-policy-questions:
+        - Q-05
+        - Q-08
+      x-permissions:
+        - kitchen.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - name: date
+          in: query
+          description: 'Ngày địa phương của nhà hàng.'
+          required: true
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: time
+          in: query
+          description: 'Giờ địa phương của nhà hàng. Bỏ qua để đọc cả ngày nếu thao tác cho phép.'
+          required: false
+          schema:
+            $ref: '#/components/schemas/Time'
+        - name: changesOnly
+          in: query
+          description: 'Chỉ lấy phiếu có thay đổi đã xác định sau mốc chốt.'
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 'Danh sách phiếu cho bếp.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/KitchenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/deposits':
+    get:
+      operationId: listOpsDeposits
+      tags:
+        - 'Đối chiếu'
+      summary: 'Đọc hàng đợi đối chiếu cọc'
+      description: 'Trả khoản hiện hành trong phạm vi quyền. open gồm các trạng thái chưa verified như bộ lọc UI. reservationId dùng mở thẳng từ chi tiết lượt. Sắp khoản trễ trước, sau đó theo giờ dùng bữa và id. Danh sách không trả bằng chứng chi tiết.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-04
+        - Q-08
+      x-permissions:
+        - deposits.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - name: status
+          in: query
+          description: 'Bộ lọc hàng đợi theo trạng thái.'
+          required: false
+          schema:
+            type: string
+            enum:
+              - open
+              - all
+              - pending
+              - review
+              - verified
+              - exception
+              - expired
+            default: open
+        - name: reservationId
+          in: query
+          description: 'Mã lượt dùng để tìm khoản hiện hành.'
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReservationReference'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 'Hàng đợi có phân trang cursor.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsDepositsPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/deposits/{depositId}':
+    get:
+      operationId: getOpsDeposit
+      tags:
+        - 'Đối chiếu'
+      summary: 'Đọc chi tiết khoản cọc cho màn đối chiếu'
+      description: 'Trả tham chiếu, số tiền, phiên bản và ngữ cảnh lượt/bàn tối thiểu được Q-08 cho phép. Nếu có Idempotency-Key, chỉ trả 200 khi tìm được kết quả ghi đối chiếu của chính nhân sự này, đúng khoản cọc và còn quyền xem. Trả 404 nếu chưa có kết quả phù hợp. Bằng chứng xác minh và quan sát sai lệch tách riêng, chỉ trả chi tiết theo quyền.'
+      x-design-status: proposed-integration
+      x-policy-questions:
+        - Q-04
+        - Q-08
+        - Q-15
+      x-permissions:
+        - deposits.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - $ref: '#/components/parameters/DepositId'
+        - $ref: '#/components/parameters/OperationResultKey'
+      responses:
+        '200':
+          description: 'Chi tiết đối chiếu theo quyền.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsDeposit'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/deposits/{depositId}/reconciliations':
+    post:
+      operationId: recordDepositReconciliation
+      tags:
+        - 'Đối chiếu'
+      summary: 'Ghi kết quả đối chiếu hoặc ngoại lệ'
+      description: 'Server chọn namespace nguồn đã duyệt và kiểm bằng chứng, mã, tiền, hạn, giao dịch lặp và phiên bản. Với match, dùng thời điểm chuyển từ bằng chứng có thẩm quyền. Nếu chưa xác minh được thời điểm, trả 422 PAYMENT_TIME_REQUIRED. Với flag_exception, lưu lý do tự do và quan sát rời nếu có, server gán mã lý do và chưa công nhận là tiền thực nhận. Tiền trễ xử lý theo Q-03/Q-04/Q-06.'
+      x-policy-questions:
+        - Q-03
+        - Q-04
+        - Q-06
+        - Q-08
+        - Q-15
+      x-permissions:
+        - deposits.read
+        - deposits.reconcile
+      security:
+        - StaffCookie: []
+          CsrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/DepositId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ReconciliationInput'
+            example:
+              decision: match
+              expectedVersion: 2
+              evidence:
+                transactionId: TEST-TXN-01
+                amountReceived: 200000
+                transferredAt: '2026-12-04T12:00:00Z'
+                transferContent: COC-DEMO-01
+      responses:
+        '201':
+          description: 'Đã ghi kết quả và trả khoản cọc hiện hành theo quyền.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OpsDeposit'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/ops/reports':
+    get:
+      operationId: getOpsReports
+      tags:
+        - 'Báo cáo'
+      summary: 'Đọc báo cáo theo khoảng ngày'
+      description: 'Ngày bắt đầu và kết thúc tính theo múi giờ nhà hàng, gồm cả hai ngày. Quy ước tạm theo màn hình và BRS Q-10 ở tài liệu ánh xạ. null biểu diễn tỷ lệ chưa tính khi mẫu số bằng 0.'
+      x-policy-questions:
+        - Q-08
+        - Q-10
+        - Q-14
+      x-permissions:
+        - reports.read
+      security:
+        - StaffCookie: []
+      parameters:
+        - name: from
+          in: query
+          description: 'Ngày bắt đầu.'
+          required: true
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: to
+          in: query
+          description: 'Ngày kết thúc, không trước from.'
+          required: true
+          schema:
+            $ref: '#/components/schemas/Date'
+      responses:
+        '200':
+          description: 'Chỉ số và phân nhóm theo nguồn đặt.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ReportsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  '/chat/messages':
+    post:
+      operationId: replyToChatMessage
+      tags:
+        - Chatbot
+      summary: 'Tư vấn món hoặc hỗ trợ nhập ý định đặt bàn'
+      description: 'Chỉ tư vấn hoặc trả gợi ý cho UI, không ghi lượt. Server truy cập menu công bố, kiểm phần ngữ cảnh được phép gửi Groq và xác thực kết quả model. Khi đủ khung và số khách, có thể cấp chatContext ngắn hạn gắn với phiên để gửi tại bước xác nhận hiện có.'
+      x-policy-questions:
+        - Q-07
+        - Q-09
+        - Q-11
+        - Q-14
+      security:
+        - GuestCookie: []
+          CsrfToken: []
+      requestBody:
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ChatInput'
+            example:
+              message: 'Tối mai có bàn cho 4 người không?'
+      responses:
+        '200':
+          description: 'Tin nhắn, gợi ý món và bước tiếp theo nếu có.'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    GuestCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-bae_guest
+      description: 'Cookie opaque HttpOnly cho phiên khách. Trình duyệt gửi cùng origin.'
+    StaffCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-bae_staff
+      description: 'Cookie opaque HttpOnly cho phiên nhân sự.'
+    CsrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: 'Token gắn phiên. Thao tác ghi cũng kiểm Origin.'
+  parameters:
+    MenuDishId:
+      name: dishId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/MenuItemReference'
+      description: 'Mã món dùng chung với thực đơn công khai trong phạm vi nhà hàng.'
+    ReservationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ReservationReference'
+      description: 'Mã lượt đã có trên route Frontend.'
+    DepositId:
+      name: depositId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+      description: 'Định danh khoản cọc được server trả về.'
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: 'Origin của ứng dụng web. Backend đối chiếu chính xác với cấu hình.'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        maxLength: 128
+        minLength: 16
+        pattern: '^[A-Za-z0-9._~-]+$'
+      description: 'Giữ cùng khóa cho cùng một lần ghi và retry. Đổi ý định thì cấp khóa khác.'
+    OperationResultKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 128
+        minLength: 16
+        pattern: '^[A-Za-z0-9._~-]+$'
+      description: 'Chỉ dùng để kiểm kết quả lần ghi đối chiếu của nhân sự hiện tại khi mất phản hồi.'
+    Limit:
+      name: limit
+      in: query
+      description: 'Kích thước trang, giới hạn kỹ thuật đề xuất.'
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Cursor:
+      name: cursor
+      in: query
+      description: 'Cursor opaque của cùng bộ lọc, thứ tự và phạm vi quyền.'
+      required: false
+      schema:
+        type: string
+        maxLength: 2048
+        minLength: 1
+  responses:
+    AttemptUnavailable:
+      description: 'Chưa có kết quả tạo lượt mà phiên được phép đọc.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: OUTCOME_NOT_AVAILABLE
+            message: 'Chưa tìm thấy kết quả của lần đặt bàn này.'
+            traceId: trace-example
+    BadRequest:
+      description: 'Định dạng request không hợp lệ.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: INVALID_REQUEST
+            message: 'Kiểm tra dữ liệu gửi.'
+            traceId: trace-example
+    Unauthenticated:
+      description: 'Thiếu phiên hoặc phiên đã hết hiệu lực.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: SESSION_REQUIRED
+            message: 'Vui lòng tiếp tục với phiên hợp lệ.'
+            traceId: trace-example
+    Forbidden:
+      description: 'Không có quyền thực hiện hoặc kiểm CSRF/Origin không đạt.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: FORBIDDEN
+            message: 'Bạn không có quyền thực hiện yêu cầu này.'
+            traceId: trace-example
+    NotFound:
+      description: 'Tài nguyên không khả dụng trong phạm vi được phép đọc.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: RESOURCE_NOT_FOUND
+            message: 'Không tìm thấy dữ liệu.'
+            traceId: trace-example
+    Conflict:
+      description: 'Xung đột trạng thái, phiên bản, bàn, khóa hoặc giao dịch.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: STATE_CONFLICT
+            message: 'Dữ liệu đã thay đổi. Vui lòng kiểm tra lại.'
+            traceId: trace-example
+    Unprocessable:
+      description: 'Đầu vào đúng dạng nhưng vi phạm quy tắc nghiệp vụ.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: RULE_VIOLATION
+            message: 'Yêu cầu chưa đáp ứng điều kiện.'
+            traceId: trace-example
+    RateLimit:
+      description: 'Vượt giới hạn tần suất.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+        Retry-After:
+          description: 'Số giây nên chờ khi server có thể xác định.'
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: RATE_LIMITED
+            message: 'Thử lại sau.'
+            traceId: trace-example
+            retryable: true
+    Unavailable:
+      description: 'Hạ tầng hoặc tích hợp tạm thời gián đoạn.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+        Retry-After:
+          description: 'Số giây nên chờ khi server có thể xác định.'
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: DEPENDENCY_UNAVAILABLE
+            message: 'Dịch vụ tạm thời gián đoạn.'
+            traceId: trace-example
+            retryable: true
+    InternalError:
+      description: 'Lỗi nội bộ. Dùng traceId để hỗ trợ, không đưa chi tiết hạ tầng vào phản hồi.'
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            const: no-store
+      content:
+        'application/json':
+          schema:
+            $ref: '#/components/schemas/ApiProblem'
+          example:
+            code: INTERNAL_ERROR
+            message: 'Đã xảy ra lỗi. Vui lòng kiểm tra lại.'
+            traceId: trace-example
+            retryable: false
+  schemas:
+    Date:
+      type: string
+      format: date
+      examples:
+        - '2026-12-05'
+    Time:
+      type: string
+      pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+      examples:
+        - '18:00'
+    Instant:
+      type: string
+      format: date-time
+    Uuid:
+      type: string
+      format: uuid
+    ReservationReference:
+      type: string
+      maxLength: 64
+      minLength: 1
+      pattern: '^[A-Z0-9][A-Z0-9-]*$'
+      examples:
+        - BAE-1044
+      description: 'Mã tham chiếu hiển thị của lượt. Phạm vi của nhà hàng lấy từ cấu hình server.'
+    Version:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    MoneyVnd:
+      type: integer
+      minimum: 0
+      maximum: 9007199254740991
+    BookingStatus:
+      type: string
+      enum:
+        - pending
+        - confirmed
+        - arrived
+        - completed
+        - no-show
+        - cancelled
+    DepositStatus:
+      type: string
+      enum:
+        - pending
+        - review
+        - verified
+        - exception
+        - expired
+    ServiceAction:
+      type: string
+      enum:
+        - confirm
+        - mark_arrived
+        - complete
+        - mark_no_show
+    Permission:
+      type: string
+      enum:
+        - menu.read
+        - menu.write
+        - reservations.read
+        - reservations.read_contact
+        - reservations.read_audit
+        - reservations.write_events
+        - floorplan.read
+        - floorplan.allocate
+        - kitchen.read
+        - deposits.read
+        - deposits.reconcile
+        - reports.read
+    PageCursor:
+      anyOf:
+        - type: string
+          maxLength: 2048
+          minLength: 1
+        - type: 'null'
+    ApiProblem:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          maxLength: 100
+          minLength: 1
+          pattern: '^[A-Z][A-Z0-9_]*$'
+        message:
+          type: string
+          maxLength: 500
+          minLength: 1
+        fields:
+          type: object
+          additionalProperties:
+            anyOf:
+              - type: string
+                maxLength: 300
+              - type: array
+                items:
+                  type: string
+                  maxLength: 300
+        traceId:
+          type: string
+          maxLength: 128
+          minLength: 1
+        retryable:
+          type: boolean
+    GuestSession:
+      type: object
+      additionalProperties: false
+      required:
+        - csrfToken
+        - expiresAt
+      properties:
+        csrfToken:
+          type: string
+          maxLength: 256
+          minLength: 16
+        expiresAt:
+          $ref: '#/components/schemas/Instant'
+    StaffSession:
+      type: object
+      additionalProperties: false
+      required:
+        - displayName
+        - displayRole
+        - permissions
+        - csrfToken
+        - expiresAt
+      properties:
+        displayName:
+          type: string
+          maxLength: 120
+          minLength: 1
+        displayRole:
+          type: string
+          enum:
+            - employee
+            - admin
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+          uniqueItems: true
+        csrfToken:
+          type: string
+          maxLength: 256
+          minLength: 16
+        expiresAt:
+          $ref: '#/components/schemas/Instant'
+    MenuItemReference:
+      type: string
+      maxLength: 120
+      minLength: 1
+      pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+    MenuDish:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - category
+        - price
+        - description
+        - image
+        - available
+        - published
+      properties:
+        id:
+          $ref: '#/components/schemas/MenuItemReference'
+        name:
+          type: string
+          maxLength: 160
+          minLength: 1
+        category:
+          type: string
+          maxLength: 100
+          minLength: 1
+        price:
+          $ref: '#/components/schemas/MoneyVnd'
+        description:
+          type: string
+          maxLength: 4000
+        image:
+          anyOf:
+            - type: string
+              maxLength: 2048
+            - type: 'null'
+        available:
+          type: boolean
+        published:
+          type: boolean
+    Dish:
+      allOf:
+        - $ref: '#/components/schemas/MenuDish'
+        - type: object
+          properties:
+            published:
+              const: true
+    MenuResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dish'
+    OpsMenuItem:
+      type: object
+      additionalProperties: false
+      required:
+        - dish
+        - version
+      properties:
+        dish:
+          $ref: '#/components/schemas/MenuDish'
+        version:
+          $ref: '#/components/schemas/Version'
+    OpsMenuResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpsMenuItem'
+    MenuItemInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - category
+        - price
+        - description
+        - available
+        - published
+      properties:
+        name:
+          type: string
+          maxLength: 90
+          pattern: '\S'
+        category:
+          type: string
+          maxLength: 60
+          pattern: '\S'
+        price:
+          type: integer
+          minimum: 1
+          maximum: 100000000
+        description:
+          type: string
+          maxLength: 300
+        available:
+          type: boolean
+        published:
+          type: boolean
+    CreateMenuItemInput:
+      allOf:
+        - $ref: '#/components/schemas/MenuItemInput'
+        - type: object
+          properties:
+            description:
+              pattern: '\S'
+    UpdateMenuItemInput:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - item
+      properties:
+        expectedVersion:
+          $ref: '#/components/schemas/Version'
+        item:
+          $ref: '#/components/schemas/MenuItemInput'
+    Slot:
+      type: object
+      additionalProperties: false
+      required:
+        - time
+        - startsAt
+        - available
+        - reason
+      properties:
+        time:
+          $ref: '#/components/schemas/Time'
+        startsAt:
+          $ref: '#/components/schemas/Instant'
+        available:
+          type: boolean
+        reason:
+          anyOf:
+            - type: string
+              enum:
+                - CAPACITY_UNAVAILABLE
+                - SLOT_CLOSED
+                - BOOKING_WINDOW_CLOSED
+            - type: 'null'
+    AvailabilityResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - date
+        - timeZone
+        - guests
+        - slots
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        timeZone:
+          type: string
+          maxLength: 80
+          minLength: 1
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Slot'
+    ContactInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - phone
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          minLength: 2
+        phone:
+          type: string
+          maxLength: 24
+          minLength: 7
+          pattern: "^\\+?[0-9 ().-]+$"
+          description: 'Cho nhập số theo giao diện hiện tại hoặc dạng quốc tế. Server chuẩn hóa và xác minh theo Q-07.'
+    ContactView:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - phone
+        - note
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        phone:
+          type: string
+          maxLength: 24
+        note:
+          anyOf:
+            - type: string
+              maxLength: 200
+            - type: 'null'
+    NewReservation:
+      type: object
+      additionalProperties: false
+      required:
+        - date
+        - time
+        - guests
+        - contact
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        contact:
+          $ref: '#/components/schemas/ContactInput'
+        note:
+          type: string
+          maxLength: 200
+        chatContext:
+          type: string
+          maxLength: 4096
+          minLength: 1
+          description: 'Ngữ cảnh có chữ ký do server cấp, gắn với phiên và khung giờ. Yêu cầu đặt gốc web có thể bỏ qua.'
+    PreorderLineInput:
+      type: object
+      additionalProperties: false
+      required:
+        - dishId
+        - quantity
+      properties:
+        dishId:
+          type: string
+          maxLength: 120
+          minLength: 1
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    PreorderLine:
+      type: object
+      additionalProperties: false
+      required:
+        - dishId
+        - name
+        - quantity
+        - unitPrice
+      properties:
+        dishId:
+          type: string
+          maxLength: 120
+          minLength: 1
+        name:
+          type: string
+          maxLength: 160
+          minLength: 1
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        unitPrice:
+          $ref: '#/components/schemas/MoneyVnd'
+    PreorderInput:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - items
+      properties:
+        expectedVersion:
+          $ref: '#/components/schemas/Version'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreorderLineInput'
+    AssignedTable:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - area
+        - state
+      properties:
+        code:
+          type: string
+          maxLength: 64
+          minLength: 1
+        area:
+          type: string
+          maxLength: 100
+          minLength: 1
+        state:
+          type: string
+          enum:
+            - held
+            - committed
+    ReservationSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - date
+        - time
+        - startsAt
+        - endsAt
+        - guests
+        - source
+        - status
+        - statusReason
+        - version
+        - tables
+      properties:
+        id:
+          $ref: '#/components/schemas/ReservationReference'
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        startsAt:
+          $ref: '#/components/schemas/Instant'
+        endsAt:
+          $ref: '#/components/schemas/Instant'
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        source:
+          type: string
+          enum:
+            - web
+            - chat
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        statusReason:
+          anyOf:
+            - type: string
+              maxLength: 64
+              minLength: 1
+            - type: 'null'
+        version:
+          $ref: '#/components/schemas/Version'
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedTable'
+    DepositSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - statusReason
+        - amountDue
+        - expiresAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          $ref: '#/components/schemas/DepositStatus'
+        statusReason:
+          $ref: '#/components/schemas/OptionalReasonCode'
+        amountDue:
+          $ref: '#/components/schemas/MoneyVnd'
+        expiresAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+    GuestReservation:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - date
+        - time
+        - startsAt
+        - endsAt
+        - guests
+        - source
+        - status
+        - statusReason
+        - version
+        - tables
+        - items
+        - preorderTotal
+        - deposit
+        - nextActions
+      properties:
+        id:
+          $ref: '#/components/schemas/ReservationReference'
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        startsAt:
+          $ref: '#/components/schemas/Instant'
+        endsAt:
+          $ref: '#/components/schemas/Instant'
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        source:
+          type: string
+          enum:
+            - web
+            - chat
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        statusReason:
+          anyOf:
+            - type: string
+              maxLength: 64
+              minLength: 1
+            - type: 'null'
+        version:
+          $ref: '#/components/schemas/Version'
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedTable'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreorderLine'
+        preorderTotal:
+          $ref: '#/components/schemas/MoneyVnd'
+        deposit:
+          anyOf:
+            - $ref: '#/components/schemas/DepositSummary'
+            - type: 'null'
+        nextActions:
+          type: array
+          items:
+            type: string
+            enum:
+              - edit_preorder
+              - request_deposit
+              - view_deposit
+          uniqueItems: true
+    PreorderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - reservation
+        - rejectedItems
+      properties:
+        reservation:
+          $ref: '#/components/schemas/GuestReservation'
+        rejectedItems:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - dishId
+              - code
+              - message
+            properties:
+              dishId:
+                type: string
+                maxLength: 120
+              code:
+                type: string
+                maxLength: 64
+                minLength: 1
+              message:
+                type: string
+                maxLength: 300
+    DepositView:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - statusReason
+        - amountDue
+        - expiresAt
+        - reference
+        - payTo
+        - qrImage
+        - canReportTransfer
+        - reportedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          $ref: '#/components/schemas/DepositStatus'
+        statusReason:
+          $ref: '#/components/schemas/OptionalReasonCode'
+        amountDue:
+          $ref: '#/components/schemas/MoneyVnd'
+        expiresAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        reference:
+          type: string
+          maxLength: 128
+          minLength: 1
+        payTo:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - bankCode
+                - accountNumber
+                - accountName
+              properties:
+                bankCode:
+                  type: string
+                  maxLength: 64
+                  minLength: 1
+                accountNumber:
+                  type: string
+                  maxLength: 64
+                accountName:
+                  type: string
+                  maxLength: 160
+            - type: 'null'
+        qrImage:
+          anyOf:
+            - type: string
+              maxLength: 500000
+              description: 'Ảnh PNG data URL do server tạo, chỉ khi được phép thanh toán.'
+              pattern: '^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$'
+            - type: 'null'
+        canReportTransfer:
+          type: boolean
+        reportedAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+    OpsReservationsPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationSummary'
+        nextCursor:
+          $ref: '#/components/schemas/PageCursor'
+    ReservationEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - occurredAt
+        - source
+        - actorLabel
+        - reasonCode
+        - note
+      properties:
+        type:
+          type: string
+          maxLength: 64
+          minLength: 1
+        occurredAt:
+          $ref: '#/components/schemas/Instant'
+        source:
+          type: string
+          enum:
+            - web
+            - chat
+            - staff
+            - provider
+            - system
+        actorLabel:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: 'null'
+        reasonCode:
+          anyOf:
+            - type: string
+              maxLength: 64
+              minLength: 1
+            - type: 'null'
+        note:
+          anyOf:
+            - type: string
+              maxLength: 300
+            - type: 'null'
+    OpsReservation:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - date
+        - time
+        - startsAt
+        - endsAt
+        - guests
+        - source
+        - status
+        - statusReason
+        - version
+        - tables
+        - contact
+        - items
+        - deposit
+        - kitchenChanged
+        - allowedServiceActions
+        - history
+      properties:
+        id:
+          $ref: '#/components/schemas/ReservationReference'
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        startsAt:
+          $ref: '#/components/schemas/Instant'
+        endsAt:
+          $ref: '#/components/schemas/Instant'
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        source:
+          type: string
+          enum:
+            - web
+            - chat
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        statusReason:
+          anyOf:
+            - type: string
+              maxLength: 64
+              minLength: 1
+            - type: 'null'
+        version:
+          $ref: '#/components/schemas/Version'
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignedTable'
+        contact:
+          anyOf:
+            - $ref: '#/components/schemas/ContactView'
+            - type: 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreorderLine'
+        deposit:
+          anyOf:
+            - $ref: '#/components/schemas/DepositSummary'
+            - type: 'null'
+        kitchenChanged:
+          type: boolean
+        allowedServiceActions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceAction'
+          uniqueItems: true
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationEvent'
+    ServiceEventInput:
+      type: object
+      additionalProperties: false
+      required:
+        - action
+        - expectedVersion
+      properties:
+        action:
+          $ref: '#/components/schemas/ServiceAction'
+        expectedVersion:
+          $ref: '#/components/schemas/Version'
+        note:
+          type: string
+          maxLength: 300
+        confirmNoShow:
+          type: boolean
+          const: true
+      if:
+        properties:
+          action:
+            const: mark_no_show
+        required:
+          - action
+      then:
+        required:
+          - confirmNoShow
+    Area:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          maxLength: 64
+          minLength: 1
+        name:
+          type: string
+          maxLength: 100
+    FloorTable:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - areaCode
+        - seats
+        - state
+        - reservationId
+      properties:
+        code:
+          type: string
+          maxLength: 64
+          minLength: 1
+        areaCode:
+          type: string
+          maxLength: 64
+          minLength: 1
+        seats:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        state:
+          type: string
+          enum:
+            - available
+            - held
+            - booked
+            - occupied
+        reservationId:
+          anyOf:
+            - $ref: '#/components/schemas/ReservationReference'
+            - type: 'null'
+    FloorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - date
+        - time
+        - timeZone
+        - areas
+        - tables
+        - reservations
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        timeZone:
+          type: string
+          maxLength: 80
+        areas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Area'
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/FloorTable'
+        reservations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationSummary'
+    AllocationInput:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - tableCodes
+      properties:
+        expectedVersion:
+          $ref: '#/components/schemas/Version'
+        tableCodes:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+            minLength: 1
+          minItems: 1
+          uniqueItems: true
+    KitchenItem:
+      type: object
+      additionalProperties: false
+      required:
+        - dishId
+        - name
+        - quantity
+      properties:
+        dishId:
+          type: string
+          maxLength: 120
+        name:
+          type: string
+          maxLength: 160
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    KitchenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - date
+        - timeZone
+        - tickets
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        timeZone:
+          type: string
+          maxLength: 80
+        tickets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - reservationId
+              - time
+              - changedAfterCutoff
+              - items
+              - deltas
+            properties:
+              reservationId:
+                $ref: '#/components/schemas/ReservationReference'
+              time:
+                $ref: '#/components/schemas/Time'
+              changedAfterCutoff:
+                type: boolean
+              items:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KitchenItem'
+              deltas:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - dishId
+                    - name
+                    - before
+                    - after
+                  properties:
+                    dishId:
+                      type: string
+                      maxLength: 120
+                    name:
+                      type: string
+                      maxLength: 160
+                    before:
+                      type: integer
+                      minimum: 0
+                      maximum: 2147483647
+                    after:
+                      type: integer
+                      minimum: 0
+                      maximum: 2147483647
+    OpsDepositSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - reservationId
+        - date
+        - time
+        - status
+        - statusReason
+        - amountDue
+        - amountReceived
+        - late
+        - version
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        reservationId:
+          $ref: '#/components/schemas/ReservationReference'
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        status:
+          $ref: '#/components/schemas/DepositStatus'
+        statusReason:
+          $ref: '#/components/schemas/OptionalReasonCode'
+        amountDue:
+          $ref: '#/components/schemas/MoneyVnd'
+        amountReceived:
+          anyOf:
+            - $ref: '#/components/schemas/MoneyVnd'
+            - type: 'null'
+        late:
+          type: boolean
+        version:
+          $ref: '#/components/schemas/Version'
+    OpsDepositsPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpsDepositSummary'
+        nextCursor:
+          $ref: '#/components/schemas/PageCursor'
+    ReconciliationEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - decision
+        - occurredAt
+        - source
+        - actorLabel
+        - reasonCode
+        - note
+      properties:
+        decision:
+          type: string
+          enum:
+            - matched
+            - exception
+        occurredAt:
+          $ref: '#/components/schemas/Instant'
+        source:
+          type: string
+          enum:
+            - staff
+            - provider
+        actorLabel:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: 'null'
+        reasonCode:
+          anyOf:
+            - type: string
+              maxLength: 64
+              minLength: 1
+            - type: 'null'
+        note:
+          anyOf:
+            - type: string
+              maxLength: 300
+            - type: 'null'
+    OpsDeposit:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - reservationId
+        - date
+        - time
+        - status
+        - statusReason
+        - amountDue
+        - amountReceived
+        - late
+        - version
+        - reference
+        - expiresAt
+        - allowedDecisions
+        - reservationContext
+        - latestEvidence
+        - latestObservation
+        - history
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        reservationId:
+          $ref: '#/components/schemas/ReservationReference'
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        status:
+          $ref: '#/components/schemas/DepositStatus'
+        statusReason:
+          $ref: '#/components/schemas/OptionalReasonCode'
+        amountDue:
+          $ref: '#/components/schemas/MoneyVnd'
+        amountReceived:
+          anyOf:
+            - $ref: '#/components/schemas/MoneyVnd'
+            - type: 'null'
+        late:
+          type: boolean
+        version:
+          $ref: '#/components/schemas/Version'
+        reference:
+          type: string
+          maxLength: 128
+        expiresAt:
+          anyOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        allowedDecisions:
+          type: array
+          items:
+            type: string
+            enum:
+              - match
+              - flag_exception
+          uniqueItems: true
+        reservationContext:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - status
+                - tableCodes
+                - reassignedTableCodes
+              properties:
+                status:
+                  $ref: '#/components/schemas/BookingStatus'
+                tableCodes:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 64
+                reassignedTableCodes:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 64
+            - type: 'null'
+        latestEvidence:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - transactionId
+                - transferredAt
+                - transferContent
+                - sourceLabel
+              properties:
+                transactionId:
+                  type: string
+                  maxLength: 128
+                transferredAt:
+                  $ref: '#/components/schemas/Instant'
+                transferContent:
+                  anyOf:
+                    - type: string
+                      maxLength: 300
+                    - type: 'null'
+                sourceLabel:
+                  type: string
+                  maxLength: 120
+            - type: 'null'
+        latestObservation:
+          anyOf:
+            - $ref: '#/components/schemas/PaymentObservation'
+            - type: 'null'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReconciliationEvent'
+    PaymentEvidenceInput:
+      type: object
+      additionalProperties: false
+      required:
+        - transactionId
+        - amountReceived
+        - transferContent
+      properties:
+        transactionId:
+          type: string
+          maxLength: 128
+          minLength: 1
+        amountReceived:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        transferredAt:
+          description: 'Thời điểm từ bằng chứng được duyệt nếu bên gửi có. Backend vẫn kiểm chứng. Không dùng giờ thao tác.'
+          $ref: '#/components/schemas/Instant'
+        transferContent:
+          type: string
+          maxLength: 300
+    PaymentObservation:
+      description: 'Dữ liệu nhân sự ghi nhận khi báo sai lệch. Có thể thiếu và chưa đại diện giao dịch xác minh.'
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        transactionId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        reportedAmount:
+          $ref: '#/components/schemas/MoneyVnd'
+        transferContent:
+          type: string
+          maxLength: 300
+    ReconciliationInput:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required:
+            - decision
+            - expectedVersion
+            - evidence
+          properties:
+            decision:
+              type: string
+              const: match
+            expectedVersion:
+              $ref: '#/components/schemas/Version'
+            evidence:
+              $ref: '#/components/schemas/PaymentEvidenceInput'
+            note:
+              type: string
+              maxLength: 300
+        - type: object
+          additionalProperties: false
+          required:
+            - decision
+            - expectedVersion
+            - note
+          properties:
+            decision:
+              type: string
+              const: flag_exception
+            expectedVersion:
+              $ref: '#/components/schemas/Version'
+            observation:
+              $ref: '#/components/schemas/PaymentObservation'
+            note:
+              type: string
+              minLength: 1
+              maxLength: 300
+    OptionalReasonCode:
+      description: 'Mã lý do an toàn theo phạm vi quyền. Giá trị nghiệp vụ phụ thuộc chính sách đã duyệt.'
+      anyOf:
+        - type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Z][A-Z0-9_]*$'
+        - type: 'null'
+    ReportsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - timeZone
+        - asOf
+        - metrics
+        - byStatus
+      properties:
+        from:
+          $ref: '#/components/schemas/Date'
+        to:
+          $ref: '#/components/schemas/Date'
+        timeZone:
+          type: string
+          maxLength: 80
+        asOf:
+          $ref: '#/components/schemas/Instant'
+        metrics:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - key
+              - value
+              - unit
+            properties:
+              key:
+                type: string
+                enum:
+                  - reservations
+                  - expected_guests
+                  - no_show_count
+                  - no_show_rate
+                  - verified_deposit_count
+                  - verified_deposit_vnd
+              value:
+                anyOf:
+                  - type: number
+                    minimum: 0
+                    maximum: 9007199254740991
+                  - type: 'null'
+              unit:
+                type: string
+                enum:
+                  - count
+                  - vnd
+                  - ratio
+            allOf:
+              - if:
+                  properties:
+                    key:
+                      const: no_show_rate
+                then:
+                  properties:
+                    unit:
+                      const: ratio
+                    value:
+                      anyOf:
+                        - type: number
+                          minimum: 0
+                          maximum: 1
+                        - type: 'null'
+                else:
+                  properties:
+                    value:
+                      $ref: '#/components/schemas/MoneyVnd'
+              - if:
+                  properties:
+                    key:
+                      const: verified_deposit_vnd
+                then:
+                  properties:
+                    unit:
+                      const: vnd
+                else:
+                  properties:
+                    unit:
+                      enum:
+                        - count
+                        - ratio
+              - if:
+                  properties:
+                    key:
+                      enum:
+                        - reservations
+                        - expected_guests
+                        - no_show_count
+                        - verified_deposit_count
+                then:
+                  properties:
+                    unit:
+                      const: count
+        byStatus:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - status
+              - web
+              - chat
+              - total
+            properties:
+              status:
+                $ref: '#/components/schemas/BookingStatus'
+              web:
+                type: integer
+                minimum: 0
+                maximum: 2147483647
+              chat:
+                type: integer
+                minimum: 0
+                maximum: 2147483647
+              total:
+                type: integer
+                minimum: 0
+                maximum: 2147483647
+    ChatDraft:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        date:
+          $ref: '#/components/schemas/Date'
+        time:
+          $ref: '#/components/schemas/Time'
+        guests:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+    ChatInput:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          maxLength: 2000
+          minLength: 1
+        draft:
+          $ref: '#/components/schemas/ChatDraft'
+        recentMessages:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - role
+              - text
+            properties:
+              role:
+                type: string
+                enum:
+                  - user
+                  - assistant
+              text:
+                type: string
+                maxLength: 2000
+                minLength: 1
+          maxItems: 8
+    ChatResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - text
+        - dishIds
+        - draft
+        - nextField
+        - chatContext
+      properties:
+        text:
+          type: string
+          maxLength: 4000
+        dishIds:
+          type: array
+          items:
+            type: string
+            maxLength: 120
+            minLength: 1
+          uniqueItems: true
+        draft:
+          anyOf:
+            - $ref: '#/components/schemas/ChatDraft'
+            - type: 'null'
+        nextField:
+          anyOf:
+            - type: string
+              enum:
+                - date
+                - time
+                - guests
+                - contact
+                - confirmation
+            - type: 'null'
+        chatContext:
+          anyOf:
+            - type: string
+              maxLength: 4096
+              minLength: 1
+            - type: 'null'

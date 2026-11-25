@@ -33,5 +33,21 @@ jobs:
       - run: npm run test:unit
       - run: npm run build
       - run: npm audit --audit-level=high
-      - name: Validate PostgreSQL Compose configuration
-        run: docker compose --env-file .env.example -f infra/compose/compose.dev.yaml config --quiet
+      - name: Run foundation integration tests with PostgreSQL 17
+        shell: bash
+        env:
+          POSTGRES_PORT: '55432'
+        run: |
+          compose=(docker compose --project-name ba-anh-em-ci --env-file .env.example -f infra/compose/compose.dev.yaml)
+          "${compose[@]}" config --quiet
+          trap '"${compose[@]}" down' EXIT
+          "${compose[@]}" up -d --wait --wait-timeout 60
+          psql=("${compose[@]}" exec -T postgres psql -X -U ba_anh_em -d ba_anh_em -v ON_ERROR_STOP=1)
+          "${psql[@]}" -q < docs/design/BACKEND_SCHEMA.sql
+          ci_readiness_password="$(node -p "require('node:crypto').randomBytes(24).toString('hex')")"
+          "${psql[@]}" -q -v readiness_password="$ci_readiness_password" <<'SQL'
+          CREATE ROLE bae_readiness_ci LOGIN PASSWORD :'readiness_password';
+          GRANT USAGE ON SCHEMA ba_anh_em TO bae_readiness_ci;
+          GRANT SELECT ON ba_anh_em.venues TO bae_readiness_ci;
+          SQL
+          BAE_TEST_DATABASE_URL="postgresql://bae_readiness_ci:${ci_readiness_password}@127.0.0.1:${POSTGRES_PORT}/ba_anh_em" npm run test:integration

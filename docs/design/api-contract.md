@@ -2,6 +2,8 @@
 
 **Trạng thái:** Dự thảo dùng để tách giao diện khỏi nguồn dữ liệu. Chưa phải OpenAPI đã duyệt và chưa thay thế hợp đồng T03. Backend hiện chưa triển khai các route nghiệp vụ.
 
+Bản thiết kế Giai đoạn 3 để duyệt gồm [OpenAPI](BACKEND_OPENAPI.yaml), [thiết kế database](DATABASE_DESIGN.md) và [bảng ánh xạ Frontend–Backend](FRONTEND_BACKEND_MAPPING.md).
+
 **Căn cứ:** API outline trong `docs/IMPLEMENTATION_PLAN.md` mục 3.1, BRS, `UI_UX_SPECIFICATION.md` và màn hình đã duyệt. Chính sách Q-01 đến Q-15 còn mở tiếp tục được giữ nguyên; các trường hoặc điều kiện phụ thuộc Q được ghi là cần xác nhận.
 
 ## Quy ước giao tiếp

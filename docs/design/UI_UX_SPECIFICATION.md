@@ -160,6 +160,7 @@ Thứ tự trên mobile theo thứ tự khối được liệt kê, trừ khi gh
 
 ### OPT-01 · Quản trị thực đơn
 
+- **Phạm vi.** Dùng màn hình `/van-hanh/thuc-don` hiện có trong MVP theo quyết định ngày 25/11/2026. Mã OPT-01 phục vụ truy vết prototype. [Ánh xạ tích hợp](FRONTEND_BACKEND_MAPPING.md)
 - **Bố cục.** Bảng trạng thái công bố và nút mở form tạo/cập nhật theo quyền. Form có nhóm nhận diện, trường công bố và trạng thái, mobile mở thành trang con hoặc sheet.
 - **Tương tác và trạng thái.** Xét thiếu trường, thay đổi đồng thời, tải lỗi, lưu thành công và quyền thay dữ liệu. Quy tắc giá và món cũ theo Q-05/Q-09; thông báo nếu thay đổi tác động khả dụng.
 

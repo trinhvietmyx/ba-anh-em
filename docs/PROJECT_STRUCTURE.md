@@ -64,16 +64,16 @@ ba-anh-em/
 
 ### Backend và database
 
-- `apps/api/src/main.ts` đọc cấu hình khởi động, tạo ứng dụng và khai báo prefix API. `app.module.ts` là điểm lắp ghép module.
+- `apps/api/src/main.ts` nạp cấu hình local, kiểm biến môi trường và khởi động. `api-app.ts` lắp prefix `/api/v1`, giới hạn JSON, CORS, biên lỗi, validation, log và OpenAPI local. `app.module.ts` lắp các module và provider.
 - API dùng CommonJS với phân giải TypeScript `NodeNext` trên Node.js 24 để dùng được các package ESM của NestJS 12 và giữ Jest cho backend theo kế hoạch. [Hướng dẫn NestJS 12](https://docs.nestjs.com/migration-guide#esm-packages).
 - `modules/` dự kiến có `auth` và các miền tương ứng frontend. Controller phụ trách biên HTTP, dịch vụ thực hiện use case, repository truy vấn khi cần. Lịch, sức chứa và giao dịch giữ bàn thuộc `booking`. Các adapter Groq và VietQR thuộc `chat` và `deposits`.
-- `platform/` chứa phần hạ tầng dùng chung như cấu hình, kết nối DB, giao dịch, logging và audit. Hiện có mã đọc cổng API và test gần mã. Module miền trao đổi qua interface dịch vụ. Web chỉ dùng HTTP và hợp đồng công khai.
-- `db/migrations/` chứa migration theo phiên bản, `db/fixtures/` chứa dữ liệu thử. `db/import/` chứa quy trình nhập dữ liệu được kiểm soát. Kysely, node-postgres, migration runner và dữ liệu thử được triển khai tại T06. Chỉ thêm `jobs/` khi cần tác vụ nền theo thiết kế đã duyệt.
-- `test/integration/` dành cho test API và giao dịch dùng PostgreSQL thật. Tách các test này khỏi Jest unit ở `src/`.
+- `platform/` chứa cấu hình, kết nối DB, health check và xử lý HTTP dùng chung. Web dùng HTTP và hợp đồng công khai. Liveness kiểm tiến trình. Readiness dùng Kysely và `pg` để kiểm PostgreSQL 17 và quyền đọc bảng nền.
+- `db/migrations/` dành cho migration theo phiên bản, `db/fixtures/` cho dữ liệu thử và `db/import/` cho quy trình nhập dữ liệu được kiểm soát. Migration runner và seed thuộc T06.
+- `test/integration/` dùng trình chạy test của Node để gọi HTTP trên ứng dụng đã build. Ca readiness chạy với PostgreSQL 17 khi cung cấp `BAE_TEST_DATABASE_URL`. Jest chạy unit test trong `src/`.
 
 ### Hợp đồng, kiểm thử và tài liệu
 
-- `packages/api-contract/` dành cho OpenAPI và type sinh từ backend. Việc sinh artifact và kiểm tra chênh lệch chưa triển khai. `docs/design/api-contract.md` là bản nháp để chuẩn bị tích hợp, không phải hợp đồng đã duyệt.
+- `packages/api-contract/` dành cho OpenAPI và type sinh từ backend. API đã cung cấp OpenAPI runtime trên local. Lệnh xuất artifact, sinh type và kiểm chênh lệch thuộc T08. [OpenAPI thiết kế](design/BACKEND_OPENAPI.yaml)
 - `tests/e2e/` chứa ca Playwright xuyên web/API. `tests/load/` chứa kịch bản k6. `tests/fixtures/` chứa dữ liệu thử cấp hệ thống.
 - `docs/decisions/` giữ quyết định kiến trúc, `docs/design/` giữ thiết kế, `docs/qa/` giữ bằng chứng kiểm thử, `docs/runbooks/` giữ hướng dẫn vận hành.
 - Các thư mục có `.gitkeep` là điểm đặt đã tổ chức sẵn. Thêm tệp thực tế khi đến task tương ứng.
@@ -82,7 +82,7 @@ ba-anh-em/
 
 - Tệp gốc quản lý Node/npm, lockfile, TypeScript strict, lint, format và các lệnh dùng chung. Cấu hình Vite, NestJS và Jest nằm cùng workspace sở hữu.
 - `infra/compose/compose.dev.yaml` cấu hình PostgreSQL 17 có volume, health check và cổng bind loopback. `infra/caddy/` dành cho cấu hình reverse proxy ở T25. Hướng dẫn local nằm ở [README](../README.md).
-- `.github/workflows/ci.yml` định nghĩa bước cài theo lockfile, lint, format, kiểm kiểu, unit test, build, quét bí mật, kiểm advisory và xác thực cấu hình Compose. Tệp workflow nằm trong repo. Thực thi trên GitHub và đặt required checks thuộc cấu hình remote.
+- `.github/workflows/ci.yml` định nghĩa cài theo lockfile, lint, format, kiểm kiểu, unit test, build, quét bí mật, kiểm advisory và integration test với PostgreSQL 17 cô lập. Kết quả chạy trên GitHub và required checks phụ thuộc cấu hình remote.
 - `.env.example` có dữ liệu giả lập. `.env` và các biến thể chứa cấu hình cá nhân được Git bỏ qua. Vite đọc `API_PORT` để đặt proxy trong dev. Biến dùng cho DB và dịch vụ ngoài thuộc server.
 
 ## Checklist nghiệm thu
@@ -93,6 +93,7 @@ ba-anh-em/
 - [x] `npm run dev` phục vụ HTML và điểm vào React. Smoke test dùng `API_PORT=3107` và đối chiếu phản hồi JSON 404 của NestJS qua Vite proxy và kết nối trực tiếp.
 - [x] Compose CLI xác thực cấu hình PostgreSQL với `.env.example`.
 - [x] YAML của workflow CI đọc được, có đúng các bước kiểm tra và phiên bản action.
+- [x] Nền API trả liveness và OpenAPI runtime qua HTTP local. Đã kiểm Vite proxy và readiness với tài khoản đọc bảng nền trên PostgreSQL 17.12 tạm.
 - [ ] Xác minh container PostgreSQL đạt trạng thái healthy. Máy hiện tại thiếu Docker Engine.
 - [ ] Xác minh CI chạy trên GitHub và cấu hình required checks. Repo hiện chưa có remote.
 
