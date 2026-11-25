@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const { after, before, test } = require('node:test');
+const contract = require('@ba-anh-em/api-contract/openapi.json');
+const Ajv2020 = require('ajv/dist/2020').default;
 const { createApiApp } = require('../../dist/api-app.js');
 const {
   readRuntimeConfig,
@@ -8,6 +10,16 @@ const {
 let app;
 let baseUrl;
 const requestLogs = [];
+const schemas = new Ajv2020({ strict: false });
+schemas.addFormat('uuid', /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i);
+
+function checkResponse(path, status, body) {
+  const { schema } =
+    contract.paths[path].get.responses[status].content['application/json'];
+  const validate = schemas.compile(schema);
+  assert.ok(validate(schema.example), JSON.stringify(validate.errors));
+  assert.ok(validate(body), JSON.stringify(validate.errors));
+}
 
 before(async () => {
   app = await createApiApp(
@@ -37,7 +49,9 @@ test('reports the process alive under the API prefix', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await response.json(), { status: 'ok' });
+  const payload = await response.json();
+  assert.deepEqual(payload, { status: 'ok' });
+  checkResponse('/api/v1/health/live', 200, payload);
 });
 
 test('reports unavailable readiness while the database is unconfigured', async () => {
@@ -47,6 +61,8 @@ test('reports unavailable readiness while the database is unconfigured', async (
   const payload = await response.json();
   assert.equal(payload.code, 'NOT_READY');
   assert.equal(payload.retryable, true);
+  assert.equal(payload.traceId, response.headers.get('x-trace-id'));
+  checkResponse('/api/v1/health/ready', 503, payload);
 });
 
 test('returns a safe, correlated error for an unknown route', async () => {
@@ -143,10 +159,18 @@ test('documents the routes served by the foundation', async () => {
   const response = await fetch(`${baseUrl}/api/v1/openapi.json`);
 
   assert.equal(response.status, 200);
-  const { paths } = await response.json();
+  const document = await response.json();
+  assert.deepEqual(document, contract);
+  const { paths } = document;
+  assert.equal(paths['/api/v1/health/live'].get.operationId, 'getLiveness');
+  assert.equal(paths['/api/v1/health/ready'].get.operationId, 'getReadiness');
+  assert.deepEqual(paths['/api/v1/health/live'].get.security, []);
   assert.ok(paths['/api/v1/health/live'].get.responses['200']);
   assert.ok(paths['/api/v1/health/ready'].get.responses['200']);
   assert.ok(paths['/api/v1/health/ready'].get.responses['503']);
+  assert.ok(
+    paths['/api/v1/health/ready'].get.responses['503'].headers['X-Trace-Id'],
+  );
 });
 
 test('rejects unknown DTO fields and keeps field validation structured', async () => {
@@ -192,7 +216,9 @@ test(
         `${await dbApp.getUrl()}/api/v1/health/ready`,
       );
       assert.equal(response.status, 200);
-      assert.deepEqual(await response.json(), { status: 'ok' });
+      const payload = await response.json();
+      assert.deepEqual(payload, { status: 'ok' });
+      checkResponse('/api/v1/health/ready', 200, payload);
     } finally {
       await dbApp.close();
     }

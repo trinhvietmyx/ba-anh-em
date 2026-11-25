@@ -1,29 +1,11 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { loadEnvFile } from 'node:process';
 import { ConsoleLogger } from '@nestjs/common';
 import { createApiApp } from './api-app';
 import {
-  readApiEnvironment,
+  loadLocalEnvironment,
   readRuntimeConfig,
 } from './platform/config/runtime-config';
 
 const logger = new ConsoleLogger('Bootstrap', { json: true });
-
-function loadLocalEnvironment(): void {
-  const envPath = resolve(__dirname, '../../../.env');
-
-  if (
-    readApiEnvironment(process.env.NODE_ENV) !== 'production' &&
-    existsSync(envPath)
-  ) {
-    try {
-      loadEnvFile(envPath);
-    } catch {
-      throw new Error('Không thể đọc cấu hình API từ .env.');
-    }
-  }
-}
 
 async function bootstrap(): Promise<void> {
   let config;

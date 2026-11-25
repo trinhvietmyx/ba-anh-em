@@ -61,7 +61,7 @@ flowchart TD
 
 - **Đã có tại repo** — `npm ci`, `npm run dev`, `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run test:unit`, `npm run build`. Có thể dùng `npm.cmd` trên PowerShell. Kiểm cấu hình PostgreSQL bằng `docker compose --env-file .env.example -f infra/compose/compose.dev.yaml config --quiet` khi Docker khả dụng.
 - **Dự kiến thêm ở bước 03** — `npm run db:migrate -w @ba-anh-em/api`, `npm run db:seed:test -w @ba-anh-em/api`, `npm run test:integration -w @ba-anh-em/api`. Lệnh chạy tài khoản và DB đúng môi trường. Test integration nhận bộ lọc tên file từ Jest khi cần kiểm một lát.
-- **Dự kiến thêm ở bước 04** — `npm run contract:generate`, `npm run contract:check` và `npm run test:e2e`. Lệnh generate xuất artifact và type từ API. Lệnh check xác minh cấu trúc, so khớp tập operation đã đưa vào lát hiện tại và phát hiện dữ liệu sinh bị lệch. Có thể lọc Playwright theo spec, ví dụ `npm run test:e2e -- tests/e2e/booking-web.spec.ts` khi lát đặt bàn đã được nối.
+- **Công cụ ở Bước 04** — `npm run contract:generate`, `npm run contract:check` và `npm run test:e2e`. Lệnh generate xuất OpenAPI và type từ NestJS. Lệnh check đối chiếu dữ liệu sinh với hai tệp đã lưu. Có thể lọc Playwright theo spec, ví dụ `npm run test:e2e -- tests/e2e/smoke.spec.ts`.
 - **Tổng kiểm bước 13–14** — Chạy unit, integration, contract và toàn bộ E2E ở CI theo phạm vi đã duyệt. Bước 14 dùng `k6 run tests/load/backend-mvp.js` sau khi có ngưỡng và môi trường phù hợp.
 
 Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API theo file đã ghi ở bước đó. Ví dụ bước 07 dùng `npm run test:integration -w @ba-anh-em/api -- --runTestsByPath test/integration/booking.spec.ts` và chạy riêng Playwright cho form đặt bàn. Trong review, xác nhận ca mới phát hiện sai lệch trước khi sửa và so kết quả sau sửa với các assertion trong checklist của lát. Chạy suite liên quan khi thay đổi transaction, projection hoặc contract mà các lát khác đang dùng.
@@ -152,15 +152,15 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Công việc**
 
-- [ ] Tạo pool `pg`, Kysely và cơ chế phân quyền tài khoản migration/runtime. Readiness kiểm kết nối/schema với timeout riêng.
-- [ ] Chuyển phần nền DDL thành migration phiên bản, gồm extension, nhà hàng, lịch và bàn. Các module thêm bảng ở bước sở hữu theo thứ tự FK.
-- [ ] Tạo `db:migrate`, `db:seed:test` và `test:integration`. Seed fixture chạy lại an toàn, tách DB test theo lần chạy hoặc worker. Quy trình nhập thật có kiểm khóa, kiểu, trùng mã và nguồn.
-- [ ] Thử DB mới, nâng từ version trước và lỗi giữa chừng. Định nghĩa ứng xử với thay đổi lịch/sức chứa khi đã có cam kết trong bước 07/09.
+- [x] Dùng pool `pg` và Kysely cho runtime/CLI với URL tài khoản riêng. Readiness kiểm kết nối, quyền đọc và lịch sử migration với timeout.
+- [x] Chuyển phần nền DDL thành migration `001_base`, gồm `btree_gist`, nhà hàng, khu, bàn và lịch. Các module thêm bảng ở bước sở hữu theo thứ tự FK.
+- [x] Tạo `db:migrate`, `db:seed:test` và `db:validate:import`. Test tạo database riêng cho từng ca. Seed chạy lại giữ dữ liệu đã chỉnh sửa. Lệnh kiểm tra nhập xác nhận nguồn, trường, kiểu, mã trùng và khóa tham chiếu trong tệp bố trí.
+- [ ] Nhập dữ liệu nhà hàng đã duyệt khi có nguồn chính thức. Quy tắc chỉnh lịch/sức chứa sau khi nhận cam kết thuộc Bước 07/09.
 
 **File và thư mục dự kiến**
 
-- Tạo `apps/api/src/platform/db/database.module.ts`, `apps/api/db/migrate.ts`, `apps/api/db/migrations/001_base.ts`, `apps/api/db/fixtures/seed-test.ts`, `apps/api/db/import/validate-input.ts` và `apps/api/test/integration/migrations.spec.ts`.
-- Sửa `apps/api/package.json`, lockfile và CI. Dùng `infra/compose/compose.dev.yaml` làm cơ sở PostgreSQL local.
+- Đặt CLI, migration `migrations/001-base.ts`, validator và fixture trong `apps/api/src/platform/db/` để build cùng API. Ca PostgreSQL nằm tại `apps/api/test/integration/migrations.test.cjs`.
+- Thêm lệnh workspace, cấu hình quyền trong README và đổi CI sang chạy migration trên PostgreSQL 17 từ Compose.
 
 **Công nghệ và công cụ** — PostgreSQL 17, Compose, Kysely, `pg`, `btree_gist` và Jest integration.
 
@@ -168,9 +168,12 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Checklist nghiệm thu**
 
-- [ ] Migration từ DB trống và từ snapshot trước thành công trên PostgreSQL 17, kiểm extension và quyền tài khoản theo môi trường.
-- [ ] Chạy seed hai lần cho cùng kết quả. Dữ liệu có mã trùng/sai hoặc tham chiếu sai bị từ chối trước khi ghi thật.
-- [ ] Fail giữa migration có kết quả rõ và không để schema báo sai phiên bản. Readiness phản ánh DB/schema chưa sẵn sàng.
+- [x] Migration từ database trống thành công trên PostgreSQL 17.12, cài `btree_gist` và chạy lại giữ một bản ghi version. Readiness chạy qua tài khoản được cấp quyền đọc.
+- [x] Seed lặp lại giữ số bản ghi và chỉnh sửa trên fixture. Lệnh kiểm tra dữ liệu từ chối tệp không hợp lệ trước khi ghi.
+- [x] Xung đột DDL giữa migration rollback bảng đã tạo và giữ lịch sử trống. Sau khi xử lý xung đột trên DB test, migration chạy lại thành công. Readiness trả `503` khi thiếu bản ghi phiên bản.
+- [ ] Kiểm nâng cấp từ phiên bản trước khi có migration thứ hai và xác minh workflow trên GitHub.
+
+**Kết quả local · VERIFIED.** PostgreSQL 17.12 cô lập chạy thành công 16 ca tích hợp. Cả workspace đạt 40 unit test, lint, typecheck và build. CLI kiểm dữ liệu chấp nhận tệp hợp lệ và từ chối tham chiếu khu bị thiếu. Bash của bước CI đã qua kiểm cú pháp. Migration và seed được kiểm trên các database thử tạo riêng.
 
 **Lỗi thường gặp và cách phòng tránh** — Dùng kết quả chạy DDL kiểm chứng thay cho bằng chứng migration. Dùng DB cô lập để thử từ DB trống và bản trước, tách vai trò runtime/migration và chỉ nhập dữ liệu vào môi trường được duyệt.
 
@@ -184,27 +187,29 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Công việc**
 
-- [ ] Thêm schema DTO, validation dạng/trường, quy ước kiểm nghiệp vụ ở use case và projection theo quyền. Điền security, headers và mã lỗi theo OpenAPI.
-- [ ] Xuất OpenAPI từ chính ứng dụng NestJS bằng công cụ đã kiểm tương thích, sinh type vào package dùng chung. Duy trì danh sách operation đã triển khai theo lát bám bản thiết kế duyệt.
-- [ ] Tạo `contract:generate`, `contract:check`, kịch bản kiểm hợp đồng và CI. Kiểm request mẫu, response thực và các ràng buộc bằng JSON Schema/HTTP test.
-- [ ] Chuẩn bị cách dùng type sinh trong `ApiClient` và adapter hiện có. Xác định cách xử lý trống, `204`, lỗi có trường, xung đột và lỗi gián đoạn.
-- [ ] Tạo cấu hình Playwright và `test:e2e` dùng dữ liệu thử từ bước 03 khi DB sẵn sàng. Thử cấu hình bằng smoke tối thiểu qua web/proxy, để từng lát thêm ca riêng từ bước 06.
+- [x] Bổ sung schema, mã thao tác ổn định, security công khai và response headers cho liveness/readiness. DTO của các route nghiệp vụ thuộc bước triển khai tương ứng.
+- [x] Dùng chung bộ tạo OpenAPI giữa Swagger runtime và CLI, sinh kiểu bằng openapi-typescript vào package dùng chung. Artifact hiện có `getLiveness` và `getReadiness`.
+- [x] Thêm `contract:generate`, `contract:check` và gate CI. Ca HTTP đối chiếu OpenAPI runtime, ví dụ và response thực bằng JSON Schema.
+- [x] Kiểm type sinh gắn với `ApiClient` từ frontend. Các ca unit hiện có kiểm `204`, lỗi có trường và response sai định dạng.
+- [x] Tạo cấu hình Playwright và `test:e2e` chạy web và API qua loopback, với tùy chọn PostgreSQL 17 đã migrate.
 
 **File và thư mục dự kiến**
 
-- Tạo `apps/api/src/platform/http/validation.ts`, `apps/api/src/platform/openapi/export.ts`, `packages/api-contract/openapi.json`, `packages/api-contract/index.d.ts`, `scripts/check-contract.ts`, `apps/api/test/integration/contract.spec.ts`, `playwright.config.ts` và `tests/e2e/smoke.spec.ts`.
-- Sửa `package.json`, `packages/api-contract/package.json`, README package và CI.
+- Tạo `apps/api/src/platform/openapi/api-document.ts`, `export.ts`, hai artifact trong `packages/api-contract/generated/`, `scripts/contract.mjs`, `playwright.config.ts` và `tests/e2e/smoke.spec.ts`.
+- Cập nhật bộ tích hợp HTTP, ca unit transport web, package manifests, README và CI.
 
-**Công nghệ và công cụ** — NestJS ValidationPipe, class-validator/class-transformer, Swagger/OpenAPI, openapi-typescript, JSON Schema, Jest/Supertest và Playwright.
+**Công nghệ và công cụ** — NestJS ValidationPipe, Swagger/OpenAPI, openapi-typescript, Ajv JSON Schema, Node test runner và Playwright.
 
 **Đầu ra** — Artifact contract cùng kiểu client cho phần đã triển khai, gate kiểm lệch và cấu hình chạy smoke/E2E theo lát.
 
 **Checklist nghiệm thu**
 
-- [ ] So khớp operationId, method/path, params, thành công/lỗi và security cho từng operation đã đưa vào lát. Ví dụ chuẩn được validate.
-- [ ] Một thay đổi có chủ đích ở response hoặc quyền làm `contract:check` thất bại. Sau hoàn nguyên gate đạt.
+- [x] OpenAPI runtime khớp artifact đã lưu. Xác minh ID, method/path, security, response headers, ví dụ và payload HTTP của hai endpoint health.
+- [x] Thay đổi có chủ đích ở schema response làm `contract:check` thất bại cho cả JSON và type. Sau hoàn nguyên gate đạt.
 - [ ] Cookie, CSRF, schema `oneOf`/điều kiện và lỗi tương thích transport hiện có được kiểm bằng ca HTTP đại diện khi route sẵn sàng.
-- [ ] Khi DB từ bước 03 sẵn sàng, smoke tối thiểu mở được web và xác minh proxy chuyển tiếp tới API trên môi trường test cô lập.
+- [x] Smoke trên Chromium mở được web và xác minh Vite proxy chuyển tiếp tới NestJS với readiness `200` trên PostgreSQL 17.12 cô lập và `503` khi chưa cấu hình DB.
+
+**Kết quả local · VERIFIED.** 40 unit test và 16 ca tích hợp đạt. Playwright smoke đạt trong cả hai cấu hình readiness. CI có bước kiểm artifact, cài Chromium headless và chạy smoke sau khi migrate database thử. Lần chạy trên GitHub còn chờ.
 
 **Lỗi thường gặp và cách phòng tránh** — Sinh type từ bản nháp rồi coi đó là hợp đồng chạy thật, hoặc so bộ full MVP với một API mới có vài route. So artifact đã sinh với phần operation được phê duyệt của lát và kiểm HTTP thực.
 
@@ -214,29 +219,32 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Mục tiêu** — Cấp được chủ thể tin cậy cho khách và nhân sự, kiểm soát quyền tại API và giữ dữ liệu riêng đúng phạm vi.
 
-**Phụ thuộc và thứ tự** — Bước 03–04. Chốt Q-07/Q-08 cho cơ chế xác thực, Q-14/Q-15 cho hạn phiên lưu và phục hồi tương ứng, có IdP thử được duyệt.
+**Phụ thuộc và thứ tự** — Bước 03–04. API dùng IdP giả lập và cấu hình phiên trong kiểm thử local. Trước khi nối khu vận hành thực tế cần xác nhận IdP, phân quyền Q-08, thời hạn lưu Q-14 và phạm vi nhận diện/phục hồi phiên Q-07/Q-15.
 
 **Công việc**
 
-- [ ] Triển khai `establishGuestSession` trước lần ghi, `beginStaffLogin`, `finishStaffLogin`, `getStaffSession` và `endStaffSession`. Dùng OIDC Authorization Code với PKCE, kiểm state/nonce và redirect cùng origin được phép.
-- [ ] Lưu digest cookie, kiểm thời hạn/thu hồi và kiểm Origin/CSRF trên lệnh ghi. Tách phiên khách/nhân sự và gắn quyền nhân sự theo nhà hàng và thao tác.
-- [ ] Đưa cổng kiểm quyền và audit vào các use case. Thử quyền theo nhà hàng ở bước này. FK quyền khách theo từng lượt và kiểm đối tượng hoàn tất cùng lượt đặt ở bước 07.
+- [x] Triển khai 5 endpoint `establishGuestSession`, `beginStaffLogin`, `finishStaffLogin`, `getStaffSession` và `endStaffSession`. Đăng nhập dùng OIDC Authorization Code với PKCE S256, kiểm state, nonce, chữ ký, issuer, audience và quyền của đường dẫn quay lại.
+- [x] Lưu digest cookie, kiểm thời hạn và thu hồi. Tách phiên khách và nhân sự. Kiểm Origin và CSRF khi ghi có phiên. Cấu hình hạn phiên bằng biến môi trường.
+- [x] Có cổng kiểm quyền và audit cho phiên và quyền nhân sự theo từng nhà hàng. Gắn vào các use case thực đơn ở Bước 06. Gắn quyền khách với lượt và kiểm đối tượng hoàn tất cùng đặt chỗ ở Bước 07.
+- [x] Giới hạn tần suất trên các endpoint phiên. Tiêu thụ một lần yêu cầu đăng nhập đã khớp state và dọn các yêu cầu đã hết hạn theo lô.
 - [ ] Nối sớm `OpsSignIn` và `OpsLayout` qua lớp xác thực/transport khi flow đăng nhập thật đã duyệt. Đánh dấu tác động lên bộ chọn vai trò demo để chủ dự án duyệt nếu cần.
 
 **File và thư mục dự kiến**
 
-- Tạo `apps/api/src/modules/auth/auth.module.ts`, `guest-session.service.ts`, `staff-auth.service.ts`, `permissions.guard.ts`, `apps/api/db/migrations/<version>_auth.ts` và `apps/api/test/integration/auth.spec.ts`.
+- `apps/api/src/modules/auth/` chứa controller, dịch vụ phiên khách và nhân sự, dịch vụ đăng nhập OIDC và giới hạn tần suất. `apps/api/src/platform/db/migrations/002-auth.ts` bổ sung bảng phiên, tài khoản và quyền. `apps/api/test/integration/auth.test.cjs` kiểm luồng API.
 - Nối `apps/web/src/services/http-client.ts` hoặc adapter phiên `apps/web/src/services/staff-session.ts`, cùng điểm gọi trong `apps/web/src/features/operations/operations.tsx` khi được phép thực thi.
 
-**Công nghệ và công cụ** — NestJS guards, cookie phiên server, OIDC, PostgreSQL, Jest/Supertest và IdP thử.
+**Công nghệ và công cụ** — NestJS, PostgreSQL 17, `openid-client`, trình chạy test Node.js, Chromium và IdP giả lập tại loopback.
 
 **Đầu ra** — Các endpoint phiên, quyền nhân sự và đường đăng nhập thật cho khu vận hành hiện có.
 
 **Checklist nghiệm thu**
 
-- [ ] Một phiên khách còn hiệu lực được giữ khi bootstrap lại. Phiên nhân sự hợp lệ khôi phục quyền và đăng xuất thu hồi phiên.
-- [ ] Thiếu/hết phiên, sai Origin/CSRF, quyền thu hồi, redirect ngoài phạm vi và nhầm phiên khách/nhân sự đều bị từ chối ở API.
-- [ ] Bằng chứng lỗi và audit không chứa token, cookie, contact thô hoặc OAuth code.
+- [x] Phiên khách còn hiệu lực được giữ khi bootstrap lại qua Vite proxy trên Chromium. Phiên nhân sự khôi phục quyền đã cấp và bị thu hồi khi đăng xuất.
+- [x] Ca kiểm thử API từ chối phiên thiếu, hết hạn hoặc đã thu hồi, sai Origin/CSRF, quyền đã thu hồi, sai nhà hàng, sai đường dẫn và nhầm loại phiên. Mã OIDC chỉ đổi được một lần. IdP gián đoạn trả `503` và quá giới hạn tần suất trả `429`.
+- [x] Ca kiểm tra log xác nhận audit và log HTTP không chứa token, cookie, CSRF token hoặc OAuth code của fixture.
+
+**Kết quả local · VERIFIED cho API.** 25 ca tích hợp đạt trên PostgreSQL 17.12 với role runtime giới hạn và IdP giả lập. Hai ca Chromium đạt qua Vite proxy. Migration `002_auth` áp dụng trên schema rỗng và nâng cấp từ `001_base` mà giữ dữ liệu nhà hàng. OpenAPI sinh từ NestJS mô tả cả năm endpoint. Giao diện đăng nhập vận hành chờ IdP và ma trận quyền thực tế. Cấu hình hạn phiên, mặc định giới hạn tần suất theo địa chỉ kết nối trực tiếp và các bước cấp quyền được mô tả trong [README](../../../README.md#phiên-khách-và-đăng-nhập-nhân-sự).
 
 **Lỗi thường gặp và cách phòng tránh** — Dùng nhãn Admin trên UI để cấp quyền hoặc áp CORS rộng để sửa sai cookie. Lấy quyền từ server, dùng cùng origin, kiểm quyền từng đối tượng ở bước sở hữu dữ liệu.
 

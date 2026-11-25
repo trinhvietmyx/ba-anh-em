@@ -1,5 +1,12 @@
 {
   "name": "@ba-anh-em/api-contract",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "types": "./generated/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./generated/index.d.ts"
+    },
+    "./openapi.json": "./generated/openapi.json"
+  }
 }

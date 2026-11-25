@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readApiResponse } from './http-client.ts';
+import type { operations } from '@ba-anh-em/api-contract';
+import { createHttpClient, readApiResponse } from './http-client.ts';
 
-test('reads a successful JSON response', async () => {
-  const response = new Response(JSON.stringify({ id: 'BAE-1042' }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
+test('reads a successful response with the generated API type', async () => {
+  type Liveness =
+    operations['getLiveness']['responses'][200]['content']['application/json'];
+  const expected: Liveness = { status: 'ok' };
+  const client = createHttpClient('/api/v1', async (url, options) => {
+    assert.equal(url, '/api/v1/health/live');
+    assert.equal(options?.method, 'GET');
+    return Response.json(expected);
   });
 
-  assert.deepEqual(await readApiResponse(response), { id: 'BAE-1042' });
+  assert.deepEqual(await client.request<Liveness>('/health/live'), expected);
 });
 
 test('accepts a no-content success response for void operations', async () => {

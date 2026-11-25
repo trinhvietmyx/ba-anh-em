@@ -34,6 +34,7 @@ erDiagram
     venues ||--o{ staff_venue_grants : "có quyền tại nhà hàng"
     staff_users ||--o{ staff_venue_grants : "được cấp"
     staff_users ||--o{ staff_sessions : "có phiên"
+    venues ||--o{ staff_sessions : "giới hạn tại"
     guest_sessions ||--o{ guest_reservation_grants : "có quyền riêng"
     reservations ||--o{ guest_reservation_grants : "cấp cho phiên"
     staff_users o|--o{ reservation_events : "ghi nhận"
@@ -74,7 +75,8 @@ Mỗi khóa thao tác thuộc đúng một chủ thể. `outcome_id` tham chiế
 
 - **Đọc thường xuyên.** `reservations_ops_time` phục vụ kỳ/ngày và phân trang theo `starts_at,id`. `reservations_ops_status_time` hỗ trợ thêm lọc tình trạng. `menu_items_public_order` và `dining_tables_active_area` bám thứ tự danh sách. Các unique index trên mã tham chiếu và mã món phục vụ đọc một mục. Tìm chuỗi con mã đặt theo UI được giữ trong contract. Chỉ bổ sung chỉ mục chuyên cho chuỗi con khi tải và kế hoạch thực thi cho thấy cần.
 - **Phân bổ, lịch sử và tiền.** Chỉ mục loại trừ GiST được PostgreSQL tạo cùng ràng buộc. Chỉ mục phần giữ theo hạn hỗ trợ dọn; các chỉ mục theo lượt, khoản, tình trạng đối chiếu và thời điểm giao dịch phục vụ tra cứu. Hàng đợi cọc có lọc theo trạng thái. Thứ tự ưu tiên trễ và giờ dùng bữa cần sắp xếp có JOIN, vì vậy đo trên dữ liệu đại diện trước khi thêm chỉ mục.
-- **Migration dự kiến.** Chuyển DDL đã duyệt sang migration Kysely có mã phiên bản. Bước nền xác minh `btree_gist` tồn tại hoặc có quyền cài trên DB đích, rồi tạo schema, CSDL nghiệp vụ và chỉ mục theo quan hệ phụ thuộc. Giữ transaction do runner quản lý khi chuyển câu lệnh từ file kiểm chứng. Dữ liệu lịch/bàn/món nhập qua bước riêng có kiểm lỗi; fixture test và dữ liệu dùng thử tách môi trường. [PostgreSQL btree_gist](https://www.postgresql.org/docs/17/btree-gist.html) · [Kysely Migrations](https://kysely.dev/docs/migrations)
+- **Migration nền.** Kysely chạy `001_base` trong transaction và ghi lịch sử trong `ba_anh_em.kysely_migration`. Migration cài `btree_gist` và tạo bảng nhà hàng, khu, bàn và lịch. Tài khoản migration sở hữu schema. Runtime đọc bảng nền và lịch sử migration. Các migration nghiệp vụ nối tiếp theo thứ tự FK khi triển khai từng module. [PostgreSQL btree_gist](https://www.postgresql.org/docs/17/btree-gist.html) · [Kysely Migrations](https://kysely.dev/docs/migrations)
+- **Migration phiên.** `002_auth` thêm tài khoản, quyền theo nhà hàng, phiên khách, phiên nhân sự và giao dịch OIDC một lần. Phiên nhân sự gắn với nhà hàng. API lấy giao của quyền lúc đăng nhập và quyền còn hiệu lực mỗi khi truy cập. Giao dịch OIDC hết hạn sau 5 phút và được dọn theo lô khi bắt đầu đăng nhập. Tài khoản runtime có quyền giới hạn trên các bảng phiên. [Cấu hình role runtime](../../README.md#phiên-khách-và-đăng-nhập-nhân-sự)
 - **Tiến hóa schema.** Migration đã phát hành được giữ nguyên. Khi có dữ liệu, thêm cấu trúc tương thích, điền dữ liệu cũ, kiểm điều kiện rồi siết constraint. Kiểm DB trống và DB phiên bản trước trên PostgreSQL 17. Với thay đổi có thể làm mất dữ liệu, xác định đường khôi phục và thử restore trước phát hành. Đo thời gian giữ khóa và truy vấn bằng dữ liệu đại diện.
 
 ## 6. Các điều kiện cần duyệt
@@ -87,7 +89,7 @@ Mỗi khóa thao tác thuộc đúng một chủ thể. `outcome_id` tham chiế
 
 ## 7. Kiểm chứng trên PostgreSQL 17
 
-Ở lượt triển khai nền ngày 25/11/2026, DDL đã chạy thành công trên database rỗng của PostgreSQL 17.12 tạm. API trả readiness `200` qua tài khoản có quyền đọc `ba_anh_em.venues`. Kiểm thử chạy migration có phiên bản, kiểm tranh bàn, cọc và gửi lại nghiệp vụ vẫn **PENDING**. CI dùng Compose để tạo môi trường kiểm thử mới. [Kế hoạch kiểm chứng](../superpowers/plans/2026-11-25-backend-implementation.md) · [Compose local](../../infra/compose/compose.dev.yaml)
+Migration `001_base` đã chạy trên database rỗng của PostgreSQL 17.12, cài `btree_gist` và ghi lịch sử phiên bản. Thử chạy lại, seed giữ chỉnh sửa, rollback khi DDL xung đột và readiness qua tài khoản chỉ đọc đều đạt. Các ca tranh bàn, cọc và gửi lại nghiệp vụ vẫn **PENDING** đến khi các module tương ứng hoạt động. CI dùng Compose để tạo môi trường kiểm thử mới và chạy cùng CLI migration. [Kế hoạch kiểm chứng](../superpowers/plans/2026-11-25-backend-implementation.md) · [Compose local](../../infra/compose/compose.dev.yaml)
 
 - **Khởi tạo và quyền.** Chạy DDL kiểm chứng trên DB PostgreSQL 17 cô lập. Ghi phiên bản server, phiên bản `btree_gist` và kết quả tạo schema. Kiểm quyền cài extension của tài khoản migration hoặc xác nhận extension đã được cấp sẵn. Kiểm tài khoản runtime dùng được bảng được cấp và thiếu quyền sửa schema. [PostgreSQL btree_gist](https://www.postgresql.org/docs/17/btree-gist.html)
 - **Phân bổ và rollback.** Kiểm hai khoảng liền kề cùng bàn được chấp nhận, khoảng chồng bị chặn và dòng đã giải phóng không chặn phân bổ mới. Thử hai transaction tranh bàn cuối. Thử phân lại thất bại và kiểm phương án cũ còn hiệu lực. [Ràng buộc loại trừ PostgreSQL](https://www.postgresql.org/docs/17/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION)

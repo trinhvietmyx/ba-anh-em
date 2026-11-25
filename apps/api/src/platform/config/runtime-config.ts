@@ -1,5 +1,9 @@
+import { existsSync } from 'node:fs';
 import { isIP } from 'node:net';
+import { resolve } from 'node:path';
+import { loadEnvFile } from 'node:process';
 import { readApiPort } from './api-port';
+import { readAuthConfig, type AuthConfig } from './auth-config';
 
 export interface RuntimeConfig {
   host: string;
@@ -7,6 +11,7 @@ export interface RuntimeConfig {
   corsOrigins: string[];
   databaseUrl?: string;
   exposeDocs: boolean;
+  auth?: AuthConfig;
 }
 
 export const RUNTIME_CONFIG = Symbol('RUNTIME_CONFIG');
@@ -45,7 +50,25 @@ function readCorsOrigins(value: string | undefined): string[] {
   return [...new Set(origins)];
 }
 
-function readDatabaseUrl(value: string | undefined): string | undefined {
+export function loadLocalEnvironment(): void {
+  const envPath = resolve(__dirname, '../../../../../.env');
+  if (
+    readApiEnvironment(process.env.NODE_ENV) === 'production' ||
+    !existsSync(envPath)
+  )
+    return;
+
+  try {
+    loadEnvFile(envPath);
+  } catch {
+    throw new Error('Không thể đọc cấu hình API từ .env.');
+  }
+}
+
+export function readDatabaseUrl(
+  value: string | undefined,
+  variable = 'DATABASE_URL',
+): string | undefined {
   if (!value) return undefined;
 
   const url = URL.parse(value);
@@ -57,7 +80,7 @@ function readDatabaseUrl(value: string | undefined): string | undefined {
     url.pathname.length < 2
   ) {
     throw new Error(
-      'DATABASE_URL must be a PostgreSQL URL with a host and database name',
+      `${variable} must be a PostgreSQL URL with a host and database name`,
     );
   }
 
@@ -68,6 +91,7 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
   const environment = readApiEnvironment(env.NODE_ENV);
   const host = env.API_HOST ?? '127.0.0.1';
   if (!isIP(host)) throw new Error('API_HOST must be an IPv4 or IPv6 address');
+  const auth = readAuthConfig(env, environment);
 
   return {
     host,
@@ -75,5 +99,6 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     corsOrigins: readCorsOrigins(env.API_CORS_ORIGINS),
     databaseUrl: readDatabaseUrl(env.DATABASE_URL),
     exposeDocs: environment !== 'production',
+    ...(auth ? { auth } : {}),
   };
 }

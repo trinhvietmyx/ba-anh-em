@@ -32,22 +32,29 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run build
+      - run: npm run contract:check
       - run: npm audit --audit-level=high
-      - name: Run foundation integration tests with PostgreSQL 17
+      - run: npm exec -- playwright install --with-deps --only-shell chromium
+      - name: Run foundation and session integration tests with PostgreSQL 17
         shell: bash
         env:
           POSTGRES_PORT: '55432'
         run: |
           compose=(docker compose --project-name ba-anh-em-ci --env-file .env.example -f infra/compose/compose.dev.yaml)
+          export POSTGRES_PASSWORD="$(node -p "require('node:crypto').randomBytes(24).toString('hex')")"
           "${compose[@]}" config --quiet
           trap '"${compose[@]}" down' EXIT
           "${compose[@]}" up -d --wait --wait-timeout 60
+          ci_migration_url="postgresql://ba_anh_em:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_PORT}/ba_anh_em"
+          MIGRATION_DATABASE_URL="$ci_migration_url" npm run db:migrate -w @ba-anh-em/api
           psql=("${compose[@]}" exec -T postgres psql -X -U ba_anh_em -d ba_anh_em -v ON_ERROR_STOP=1)
-          "${psql[@]}" -q < docs/design/BACKEND_SCHEMA.sql
           ci_readiness_password="$(node -p "require('node:crypto').randomBytes(24).toString('hex')")"
           "${psql[@]}" -q -v readiness_password="$ci_readiness_password" <<'SQL'
           CREATE ROLE bae_readiness_ci LOGIN PASSWORD :'readiness_password';
           GRANT USAGE ON SCHEMA ba_anh_em TO bae_readiness_ci;
-          GRANT SELECT ON ba_anh_em.venues TO bae_readiness_ci;
+          GRANT SELECT ON ba_anh_em.venues, ba_anh_em.kysely_migration TO bae_readiness_ci;
+          GRANT SELECT, INSERT ON ba_anh_em.guest_sessions TO bae_readiness_ci;
           SQL
-          BAE_TEST_DATABASE_URL="postgresql://bae_readiness_ci:${ci_readiness_password}@127.0.0.1:${POSTGRES_PORT}/ba_anh_em" npm run test:integration
+          export BAE_TEST_DATABASE_URL="postgresql://bae_readiness_ci:${ci_readiness_password}@127.0.0.1:${POSTGRES_PORT}/ba_anh_em"
+          BAE_TEST_POSTGRES_ADMIN_URL="$ci_migration_url" npm run test:integration
+          BAE_E2E_GUEST_SESSION=1 npm run test:e2e

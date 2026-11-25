@@ -8,7 +8,10 @@
     "build": "nest build",
     "typecheck": "tsc --noEmit",
     "test:unit": "jest --runInBand",
-    "test:integration": "npm run build && node --test \"test/integration/*.test.cjs\""
+    "test:integration": "npm run build && node --test \"test/integration/*.test.cjs\"",
+    "db:migrate": "node dist/platform/db/database-cli.js migrate",
+    "db:seed:test": "node dist/platform/db/database-cli.js seed-test",
+    "db:validate:import": "node dist/platform/db/database-cli.js validate-import"
   },
   "dependencies": {
     "@nestjs/common": "12.5.1",
@@ -18,11 +21,13 @@
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
     "kysely": "0.29.9",
+    "openid-client": "6.9.1",
     "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@ba-anh-em/api-contract": "0.0.0",
     "@nestjs/cli": "12.0.13",
     "@types/jest": "30.0.0",
     "@types/node": "24.19.2",

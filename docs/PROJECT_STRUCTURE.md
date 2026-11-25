@@ -1,6 +1,6 @@
 # Cấu trúc dự án Full Stack — Nhà hàng Ba Anh Em
 
-Cấu trúc nền được khởi tạo ở T05 trong [kế hoạch](IMPLEMENTATION_PLAN.md), dựa trên [BRS v0.1](../../documents/BRS-Nha-hang-Ba-Anh-Em.md). Repo có npm workspaces cho web, API, prototype đã duyệt và package hợp đồng. Tính đến 20/11/2026, `apps/web` đã nhận giao diện và nền tảng service/mock ban đầu từ Prototype; T08 vẫn đang làm vì chưa có OpenAPI từ Backend, xác thực thật và smoke test API.
+Cấu trúc nền được khởi tạo ở T05 trong [kế hoạch](IMPLEMENTATION_PLAN.md), dựa trên [BRS v0.1](BRS-Nha-hang-Ba-Anh-Em.md). Repo có npm workspaces cho web, API, prototype đã duyệt và package hợp đồng. `apps/web` dùng giao diện và lớp service ban đầu từ Prototype. T08 đã có OpenAPI sinh từ NestJS và smoke test API qua Vite proxy. Tích hợp xác thực nhân sự vào giao diện cần IdP và ma trận quyền đã được xác nhận.
 
 ## Cây thư mục
 
@@ -66,15 +66,15 @@ ba-anh-em/
 
 - `apps/api/src/main.ts` nạp cấu hình local, kiểm biến môi trường và khởi động. `api-app.ts` lắp prefix `/api/v1`, giới hạn JSON, CORS, biên lỗi, validation, log và OpenAPI local. `app.module.ts` lắp các module và provider.
 - API dùng CommonJS với phân giải TypeScript `NodeNext` trên Node.js 24 để dùng được các package ESM của NestJS 12 và giữ Jest cho backend theo kế hoạch. [Hướng dẫn NestJS 12](https://docs.nestjs.com/migration-guide#esm-packages).
-- `modules/` dự kiến có `auth` và các miền tương ứng frontend. Controller phụ trách biên HTTP, dịch vụ thực hiện use case, repository truy vấn khi cần. Lịch, sức chứa và giao dịch giữ bàn thuộc `booking`. Các adapter Groq và VietQR thuộc `chat` và `deposits`.
-- `platform/` chứa cấu hình, kết nối DB, health check và xử lý HTTP dùng chung. Web dùng HTTP và hợp đồng công khai. Liveness kiểm tiến trình. Readiness dùng Kysely và `pg` để kiểm PostgreSQL 17 và quyền đọc bảng nền.
-- `db/migrations/` dành cho migration theo phiên bản, `db/fixtures/` cho dữ liệu thử và `db/import/` cho quy trình nhập dữ liệu được kiểm soát. Migration runner và seed thuộc T06.
-- `test/integration/` dùng trình chạy test của Node để gọi HTTP trên ứng dụng đã build. Ca readiness chạy với PostgreSQL 17 khi cung cấp `BAE_TEST_DATABASE_URL`. Jest chạy unit test trong `src/`.
+- `modules/auth/` vận hành phiên khách, đăng nhập nhân sự OIDC, giới hạn tần suất và kiểm quyền theo nhà hàng. Lịch, sức chứa và giao dịch giữ bàn thuộc miền `booking`. Các adapter Groq và VietQR thuộc `chat` và `deposits`.
+- `platform/` chứa cấu hình, kết nối DB, health check và xử lý HTTP dùng chung. Liveness kiểm tiến trình. Readiness kiểm PostgreSQL 17, quyền đọc bảng nền và lịch sử migration `001_base`, `002_auth`.
+- `src/platform/db/` chứa CLI, các migration TypeScript, fixture và trình kiểm tra tệp bố trí. `apps/api/db/` dành cho tệp dữ liệu nhập và tài sản database ngoài mã.
+- `test/integration/` dùng trình chạy test của Node cho HTTP, PostgreSQL 17 và OIDC giả lập. `BAE_TEST_DATABASE_URL` bật ca readiness. `BAE_TEST_POSTGRES_ADMIN_URL` bật ca migration và phiên trên database test cô lập. Jest chạy unit test trong `src/`.
 
 ### Hợp đồng, kiểm thử và tài liệu
 
-- `packages/api-contract/` dành cho OpenAPI và type sinh từ backend. API đã cung cấp OpenAPI runtime trên local. Lệnh xuất artifact, sinh type và kiểm chênh lệch thuộc T08. [OpenAPI thiết kế](design/BACKEND_OPENAPI.yaml)
-- `tests/e2e/` chứa ca Playwright xuyên web/API. `tests/load/` chứa kịch bản k6. `tests/fixtures/` chứa dữ liệu thử cấp hệ thống.
+- `packages/api-contract/generated/` chứa OpenAPI và type được sinh từ route NestJS đang triển khai. `scripts/contract.mjs` sinh và đối chiếu hai tệp. Package xuất type cho web và JSON cho bộ kiểm tích hợp. [Hướng dẫn hợp đồng](../packages/api-contract/README.md) · [OpenAPI thiết kế](design/BACKEND_OPENAPI.yaml)
+- `tests/e2e/` có smoke Playwright mở trang chủ và gọi NestJS qua Vite proxy. `tests/load/` dành cho kịch bản k6. `tests/fixtures/` chứa dữ liệu thử cấp hệ thống.
 - `docs/decisions/` giữ quyết định kiến trúc, `docs/design/` giữ thiết kế, `docs/qa/` giữ bằng chứng kiểm thử, `docs/runbooks/` giữ hướng dẫn vận hành.
 - Các thư mục có `.gitkeep` là điểm đặt đã tổ chức sẵn. Thêm tệp thực tế khi đến task tương ứng.
 

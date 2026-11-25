@@ -4,11 +4,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ConsoleLogger, type LoggerService } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import type { RuntimeConfig } from './platform/config/runtime-config';
 import { ApiErrorFilter } from './platform/http/api-error.filter';
 import { createValidationPipe } from './platform/http/validation';
+import { createApiDocument } from './platform/openapi/api-document';
 
 export async function createApiApp(
   config: RuntimeConfig,
@@ -63,22 +64,11 @@ export async function createApiApp(
   app.useGlobalPipes(createValidationPipe());
 
   if (config.exposeDocs) {
-    const settings = new DocumentBuilder()
-      .setTitle('Nhà hàng Ba Anh Em API')
-      .setVersion('0.0.0')
-      .setOpenAPIVersion('3.1.1')
-      .build();
-
-    SwaggerModule.setup(
-      'docs',
-      app,
-      () => SwaggerModule.createDocument(app, settings),
-      {
-        useGlobalPrefix: true,
-        jsonDocumentUrl: 'openapi.json',
-        raw: ['json'],
-      },
-    );
+    SwaggerModule.setup('docs', app, () => createApiDocument(app), {
+      useGlobalPrefix: true,
+      jsonDocumentUrl: 'openapi.json',
+      raw: ['json'],
+    });
   }
 
   return app;
