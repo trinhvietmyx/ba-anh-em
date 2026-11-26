@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { loadEnvFile } from 'node:process';
 import { readApiPort } from './api-port';
 import { readAuthConfig, type AuthConfig } from './auth-config';
+import { TEST_DATABASE_SUFFIX } from '../db/test-database';
 
 export interface RuntimeConfig {
   host: string;
@@ -12,6 +13,8 @@ export interface RuntimeConfig {
   databaseUrl?: string;
   exposeDocs: boolean;
   auth?: AuthConfig;
+  menuVenueCode?: string;
+  bookingTestEnabled?: boolean;
 }
 
 export const RUNTIME_CONFIG = Symbol('RUNTIME_CONFIG');
@@ -92,13 +95,42 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
   const host = env.API_HOST ?? '127.0.0.1';
   if (!isIP(host)) throw new Error('API_HOST must be an IPv4 or IPv6 address');
   const auth = readAuthConfig(env, environment);
+  const databaseUrl = readDatabaseUrl(env.DATABASE_URL);
+  const bookingTestEnabled = env.BOOKING_TEST_ENABLED === '1';
+  if (bookingTestEnabled) {
+    const database = databaseUrl ? new URL(databaseUrl) : undefined;
+    if (
+      environment === 'production' ||
+      !['127.0.0.1', '::1'].includes(host) ||
+      !database ||
+      !['localhost', '127.0.0.1', '[::1]'].includes(database.hostname) ||
+      !!database.search ||
+      !!database.hash ||
+      !TEST_DATABASE_SUFFIX.test(database.pathname)
+    ) {
+      throw new Error(
+        'BOOKING_TEST_ENABLED requires a local API and a loopback test database',
+      );
+    }
+  }
+  const menuVenueCode = env.MENU_VENUE_CODE?.trim();
+  if (
+    menuVenueCode &&
+    (menuVenueCode.length > 64 || menuVenueCode.includes('\0'))
+  ) {
+    throw new Error(
+      'MENU_VENUE_CODE must be a venue code of at most 64 characters',
+    );
+  }
 
   return {
     host,
     port: readApiPort(env.API_PORT),
     corsOrigins: readCorsOrigins(env.API_CORS_ORIGINS),
-    databaseUrl: readDatabaseUrl(env.DATABASE_URL),
+    databaseUrl,
     exposeDocs: environment !== 'production',
     ...(auth ? { auth } : {}),
+    ...(menuVenueCode ? { menuVenueCode } : {}),
+    ...(bookingTestEnabled ? { bookingTestEnabled } : {}),
   };
 }

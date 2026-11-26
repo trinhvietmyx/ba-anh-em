@@ -92,4 +92,11 @@ export class GuestSessionService {
     if (!guest) throw new UnauthorizedException();
     return guest.id;
   }
+
+  async requireReadSession(headers: IncomingHttpHeaders): Promise<string> {
+    this.settings();
+    const guest = await this.findSession(requireCookie(headers, GUEST_COOKIE));
+    if (!guest) throw new UnauthorizedException();
+    return guest.id;
+  }
 }

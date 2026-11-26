@@ -10,13 +10,20 @@ import { createDatabase, isPostgres17 } from './connection';
 import { validateFoundationImport } from './foundation-import';
 import {
   AUTH_MIGRATION,
+  BOOKING_MIGRATION,
   DATABASE_SCHEMA,
   FOUNDATION_MIGRATION,
+  MENU_MIGRATION,
   MIGRATION_TABLE,
 } from './migration-history';
 import * as foundation from './migrations/001-base';
 import * as auth from './migrations/002-auth';
+import * as menu from './migrations/003-menu';
+import * as booking from './migrations/004-booking';
+import { seedBookingTest } from './seed-booking-test';
 import { seedFoundationTest } from './seed-foundation-test';
+import { seedMenuTest } from './seed-menu-test';
+import { TEST_DATABASE_SUFFIX } from './test-database';
 
 class CommandError extends Error {}
 
@@ -57,6 +64,8 @@ async function migrate(db: Kysely<object>): Promise<void> {
       getMigrations: async () => ({
         [FOUNDATION_MIGRATION]: foundation,
         [AUTH_MIGRATION]: auth,
+        [MENU_MIGRATION]: menu,
+        [BOOKING_MIGRATION]: booking,
       }),
     },
   });
@@ -79,11 +88,18 @@ async function run(command: string | undefined): Promise<void> {
     await validateImport(process.argv[3]);
     return;
   }
-  if (command !== 'migrate' && command !== 'seed-test') {
-    throw new CommandError('Chọn migrate, seed-test hoặc validate-import.');
+  if (
+    command !== 'migrate' &&
+    command !== 'seed-test' &&
+    command !== 'seed-menu-test' &&
+    command !== 'seed-booking-test'
+  ) {
+    throw new CommandError(
+      'Chọn migrate, seed-test, seed-menu-test, seed-booking-test hoặc validate-import.',
+    );
   }
 
-  const isSeed = command === 'seed-test';
+  const isSeed = command !== 'migrate';
   const variable = isSeed
     ? 'BAE_TEST_SEED_DATABASE_URL'
     : 'MIGRATION_DATABASE_URL';
@@ -114,13 +130,23 @@ async function run(command: string | undefined): Promise<void> {
     const target = rows[0];
     if (!target?.supported) throw new CommandError('Cần PostgreSQL 17.');
     if (isSeed) {
-      if (!/_test(?:_[a-z0-9]+)*$/i.test(target.database_name)) {
+      if (!TEST_DATABASE_SUFFIX.test(target.database_name)) {
         throw new CommandError(
           'Database seed phải có hậu tố _test hoặc _test_<id>.',
         );
       }
-      await seedFoundationTest(db);
-      console.log('Đã áp dụng fixture kiểm thử nền.');
+      if (command === 'seed-menu-test') {
+        const items = await seedMenuTest(db);
+        console.log(
+          `Đã nạp fixture kiểm thử thực đơn (${items} món trong nguồn).`,
+        );
+      } else if (command === 'seed-booking-test') {
+        await seedBookingTest(db);
+        console.log('Đã nạp lịch phục vụ kiểm thử đặt bàn.');
+      } else {
+        await seedFoundationTest(db);
+        console.log('Đã áp dụng fixture kiểm thử nền.');
+      }
     } else {
       await migrate(db);
     }

@@ -35,26 +35,40 @@ jobs:
       - run: npm run contract:check
       - run: npm audit --audit-level=high
       - run: npm exec -- playwright install --with-deps --only-shell chromium
-      - name: Run foundation and session integration tests with PostgreSQL 17
+      - name: Run PostgreSQL 17 integration and browser tests
         shell: bash
         env:
           POSTGRES_PORT: '55432'
+          POSTGRES_DB: ba_anh_em_ci_test
         run: |
           compose=(docker compose --project-name ba-anh-em-ci --env-file .env.example -f infra/compose/compose.dev.yaml)
           export POSTGRES_PASSWORD="$(node -p "require('node:crypto').randomBytes(24).toString('hex')")"
           "${compose[@]}" config --quiet
           trap '"${compose[@]}" down' EXIT
           "${compose[@]}" up -d --wait --wait-timeout 60
-          ci_migration_url="postgresql://ba_anh_em:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_PORT}/ba_anh_em"
+          ci_migration_url="postgresql://ba_anh_em:${POSTGRES_PASSWORD}@127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DB}"
           MIGRATION_DATABASE_URL="$ci_migration_url" npm run db:migrate -w @ba-anh-em/api
-          psql=("${compose[@]}" exec -T postgres psql -X -U ba_anh_em -d ba_anh_em -v ON_ERROR_STOP=1)
+          NODE_ENV=test BAE_TEST_SEED_DATABASE_URL="$ci_migration_url" npm run db:seed:test -w @ba-anh-em/api
+          NODE_ENV=test BAE_TEST_SEED_DATABASE_URL="$ci_migration_url" npm run db:seed:menu:test -w @ba-anh-em/api
+          NODE_ENV=test BAE_TEST_SEED_DATABASE_URL="$ci_migration_url" npm run db:seed:booking:test -w @ba-anh-em/api
+          psql=("${compose[@]}" exec -T postgres psql -X -U ba_anh_em -d "$POSTGRES_DB" -v ON_ERROR_STOP=1)
           ci_readiness_password="$(node -p "require('node:crypto').randomBytes(24).toString('hex')")"
           "${psql[@]}" -q -v readiness_password="$ci_readiness_password" <<'SQL'
           CREATE ROLE bae_readiness_ci LOGIN PASSWORD :'readiness_password';
           GRANT USAGE ON SCHEMA ba_anh_em TO bae_readiness_ci;
           GRANT SELECT ON ba_anh_em.venues, ba_anh_em.kysely_migration TO bae_readiness_ci;
           GRANT SELECT, INSERT ON ba_anh_em.guest_sessions TO bae_readiness_ci;
+          GRANT SELECT ON ba_anh_em.staff_users, ba_anh_em.staff_venue_grants, ba_anh_em.staff_sessions TO bae_readiness_ci;
+          GRANT UPDATE (idle_expires_at, revoked_at) ON ba_anh_em.staff_sessions TO bae_readiness_ci;
+          GRANT SELECT, INSERT ON ba_anh_em.menu_items, ba_anh_em.menu_write_keys TO bae_readiness_ci;
+          GRANT UPDATE (name, category, price_vnd, description, available, published, version, updated_at) ON ba_anh_em.menu_items TO bae_readiness_ci;
+          GRANT SELECT ON ba_anh_em.dining_tables, ba_anh_em.service_rules, ba_anh_em.service_day_overrides, ba_anh_em.service_override_windows TO bae_readiness_ci;
+          GRANT SELECT, INSERT ON ba_anh_em.reservations, ba_anh_em.table_allocations, ba_anh_em.guest_reservation_grants, ba_anh_em.operation_keys TO bae_readiness_ci;
+          GRANT INSERT ON ba_anh_em.reservation_contacts, ba_anh_em.reservation_events TO bae_readiness_ci;
+          GRANT UPDATE (status, status_reason, version, updated_at) ON ba_anh_em.reservations TO bae_readiness_ci;
+          GRANT UPDATE (state, released_at) ON ba_anh_em.table_allocations TO bae_readiness_ci;
+          GRANT EXECUTE ON FUNCTION ba_anh_em.lock_booking_venue(uuid) TO bae_readiness_ci;
           SQL
-          export BAE_TEST_DATABASE_URL="postgresql://bae_readiness_ci:${ci_readiness_password}@127.0.0.1:${POSTGRES_PORT}/ba_anh_em"
+          export BAE_TEST_DATABASE_URL="postgresql://bae_readiness_ci:${ci_readiness_password}@127.0.0.1:${POSTGRES_PORT}/${POSTGRES_DB}"
           BAE_TEST_POSTGRES_ADMIN_URL="$ci_migration_url" npm run test:integration
-          BAE_E2E_GUEST_SESSION=1 npm run test:e2e
+          BAE_E2E_GUEST_SESSION=1 BAE_E2E_MENU=1 BAE_E2E_BOOKING=1 BAE_E2E_MENU_ADMIN_URL="$ci_migration_url" npm run test:e2e

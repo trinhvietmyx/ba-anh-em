@@ -127,7 +127,11 @@ export class StaffSessionService {
 
   private async authorize(
     headers: IncomingHttpHeaders,
-    required?: { venueId: string; permission: StaffPermission; write: boolean },
+    required?: {
+      venueId: string;
+      permissions: readonly StaffPermission[];
+      write: boolean;
+    },
   ) {
     const { db, origin, staff } = this.settings();
     if (required?.write) requireOrigin(headers, origin);
@@ -154,7 +158,9 @@ export class StaffSessionService {
         !session.permissions.length ||
         (required &&
           (session.venue_id !== required.venueId ||
-            !session.permissions.includes(required.permission)))
+            !required.permissions.every((permission) =>
+              session.permissions.includes(permission),
+            )))
       ) {
         this.logger.warn({
           event: 'staff.access.denied',
@@ -193,12 +199,12 @@ export class StaffSessionService {
   async requirePermission(
     headers: IncomingHttpHeaders,
     venueId: string,
-    permission: StaffPermission,
+    permission: StaffPermission | readonly StaffPermission[],
     write: boolean,
   ): Promise<string> {
     const { session } = await this.authorize(headers, {
       venueId,
-      permission,
+      permissions: typeof permission === 'string' ? [permission] : permission,
       write,
     });
     return session.staff_user_id;

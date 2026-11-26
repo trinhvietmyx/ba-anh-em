@@ -27,7 +27,19 @@ import {
   type SetStateAction,
 } from 'react';
 import { Link, useParams } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRestaurant } from '../../app/restaurant-context';
+import { OPS_PATHS } from '../../shared/access';
+import { ApiServiceError } from '../../services/contracts';
+import {
+  menuApi,
+  menuStaffKey,
+  opsMenuKey,
+  publishedMenuKey,
+  menuUsesApi,
+  type EditableMenuItem,
+  type MenuDraft,
+} from '../../services/menu-api';
 import { MOCK_EVENTS, MOCK_REVIEWS } from '../../mocks/extension-fixtures';
 import type {
   ChangeRequest,
@@ -330,16 +342,227 @@ function availableTables(
 }
 
 export function MenuAdmin() {
-  const { dishes, role } = useRestaurant();
-  const [search, setSearch] = useState('');
-  const [visibility, setVisibility] = useState('all');
-  const [editing, setEditing] = useState<Dish | 'new' | null>(null);
-  const [feedback, setFeedback] = useState('');
+  return menuUsesApi ? <DatabaseMenuAdmin /> : <DemoMenuAdmin />;
+}
 
+type MenuEdit = EditableMenuItem | 'new';
+type SaveMenuItem = (
+  editing: MenuEdit,
+  draft: MenuDraft,
+  key: string,
+) => Promise<Dish>;
+
+function DemoMenuAdmin() {
+  const { dishes, bookings, role, setDishes, updateBooking } = useRestaurant();
   if (role !== 'admin') return <PreviewAccess staff />;
 
-  const shown = dishes.filter(
-    (dish) =>
+  const persist: SaveMenuItem = async (editing, draft) => {
+    const dish = editing === 'new' ? undefined : editing.dish;
+    if (dish && dishes.find((item) => item.id === dish.id) !== dish) {
+      throw new Error('Thông tin món đã thay đổi. Mở lại món để kiểm tra.');
+    }
+    const updated = {
+      ...draft,
+      id: dish?.id ?? `MON-${Date.now().toString(36)}`,
+      image: dish?.image,
+    };
+    if (dish && dish.price !== updated.price) {
+      for (const booking of bookings) {
+        if (
+          booking.items.some(
+            (line) => line.dishId === dish.id && line.unitPrice === undefined,
+          )
+        ) {
+          void updateBooking(booking.id, {
+            items: booking.items.map((line) =>
+              line.dishId === dish.id
+                ? { ...line, unitPrice: line.unitPrice ?? dish.price }
+                : line,
+            ),
+          });
+        }
+      }
+    }
+    setDishes((current) =>
+      dish
+        ? current.map((item) => (item.id === dish.id ? updated : item))
+        : [...current, updated],
+    );
+    return updated;
+  };
+
+  return (
+    <MenuList
+      items={dishes.map((dish) => ({ dish, version: 1 }))}
+      canWrite
+      persist={persist}
+    />
+  );
+}
+
+function DatabaseMenuAdmin() {
+  const queryClient = useQueryClient();
+  const [logoutError, setLogoutError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
+  const staff = useQuery({
+    queryKey: menuStaffKey,
+    queryFn: ({ signal }) => menuApi.session(signal),
+    retry: false,
+    gcTime: 0,
+  });
+  const canRead =
+    staff.isSuccess && staff.data.permissions.includes('menu.read');
+  const canWrite =
+    canRead && staff.data?.permissions.includes('menu.write') === true;
+  const menu = useQuery({
+    queryKey: opsMenuKey,
+    queryFn: ({ signal }) => menuApi.listForStaff(signal),
+    enabled: canRead,
+    retry: false,
+    gcTime: 0,
+  });
+  const sessionExpired = (error: unknown) =>
+    error instanceof ApiServiceError && error.status === 401;
+  const menuDenied =
+    menu.error instanceof ApiServiceError && menu.error.status === 403;
+  const needsLogin = sessionExpired(staff.error) || sessionExpired(menu.error);
+
+  async function logout() {
+    if (!staff.data || loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError('');
+    try {
+      await menuApi.logout(staff.data.csrfToken);
+    } catch (error) {
+      if (!sessionExpired(error)) {
+        setLogoutError('Chưa đăng xuất được. Vui lòng thử lại.');
+        setLoggingOut(false);
+        return;
+      }
+    }
+    window.location.assign('/');
+  }
+
+  const persist: SaveMenuItem = async (editing, draft, key) => {
+    if (!staff.data || !canWrite) throw new Error('Bạn chưa có quyền lưu món.');
+    try {
+      const saved = await menuApi.save(
+        draft,
+        key,
+        staff.data.csrfToken,
+        editing === 'new'
+          ? undefined
+          : { id: editing.dish.id, version: editing.version },
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: opsMenuKey }),
+        queryClient.invalidateQueries({ queryKey: publishedMenuKey }),
+      ]);
+      return saved;
+    } catch (error) {
+      if (
+        error instanceof ApiServiceError &&
+        error.code === 'MENU_VERSION_CONFLICT'
+      )
+        await menu.refetch();
+      if (
+        error instanceof ApiServiceError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        void staff.refetch();
+      }
+      throw error;
+    }
+  };
+
+  return (
+    <main className="container" id="ops-main" tabIndex={-1}>
+      <div className="ext-actions">
+        <Link className="text-link" to="/">
+          Về trang chủ
+        </Link>
+        {staff.isSuccess && !needsLogin && (
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void logout()}
+            disabled={loggingOut}
+          >
+            {loggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
+          </button>
+        )}
+      </div>
+      {logoutError && <Notice tone="danger">{logoutError}</Notice>}
+      {staff.isPending || (canRead && menu.isPending) ? (
+        <p role="status">Đang tải quyền và thực đơn…</p>
+      ) : needsLogin ? (
+        <Empty
+          title="Đăng nhập để quản lý thực đơn"
+          action={
+            <a
+              className="button"
+              href={`/api/v1/ops/auth/login?returnTo=${encodeURIComponent(OPS_PATHS.menu)}`}
+            >
+              Đăng nhập nhân sự
+            </a>
+          }
+        />
+      ) : menuDenied ||
+        (staff.isSuccess && !canRead) ||
+        (staff.error instanceof ApiServiceError &&
+          staff.error.status === 403) ? (
+        <Empty title="Bạn chưa có quyền xem thực đơn vận hành" />
+      ) : staff.isError || (menu.isError && !menu.data) ? (
+        <Empty
+          title="Chưa tải được thực đơn vận hành"
+          action={
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => {
+                if (staff.isError) void staff.refetch();
+                else void menu.refetch();
+              }}
+            >
+              Thử lại
+            </button>
+          }
+        />
+      ) : (
+        <>
+          {menu.isRefetchError && (
+            <Notice tone="warning">
+              Chưa cập nhật được danh mục. Dữ liệu hiển thị là lần tải trước.
+            </Notice>
+          )}
+          <MenuList
+            items={menu.data ?? []}
+            canWrite={canWrite}
+            persist={persist}
+          />
+        </>
+      )}
+    </main>
+  );
+}
+
+function MenuList({
+  items,
+  canWrite,
+  persist,
+}: {
+  items: EditableMenuItem[];
+  canWrite: boolean;
+  persist: SaveMenuItem;
+}) {
+  const [search, setSearch] = useState('');
+  const [visibility, setVisibility] = useState('all');
+  const [editing, setEditing] = useState<MenuEdit | null>(null);
+  const [feedback, setFeedback] = useState('');
+
+  const dishes = items.map(({ dish }) => dish);
+  const shown = items.filter(
+    ({ dish }) =>
       `${dish.name} ${dish.category}`
         .toLocaleLowerCase('vi')
         .includes(search.trim().toLocaleLowerCase('vi')) &&
@@ -350,17 +573,19 @@ export function MenuAdmin() {
   return (
     <div className="ext-page">
       <PageHead
-        eyebrow={PREVIEW.optional}
+        eyebrow={menuUsesApi ? undefined : PREVIEW.optional}
         title="Quản trị thực đơn"
         description="Sửa thông tin món, bật đặt trước hoặc ẩn món khỏi thực đơn."
         action={
-          <button
-            className="button"
-            type="button"
-            onClick={() => setEditing('new')}
-          >
-            <Plus size={18} /> Thêm món
-          </button>
+          canWrite && (
+            <button
+              className="button"
+              type="button"
+              onClick={() => setEditing('new')}
+            >
+              <Plus size={18} /> Thêm món
+            </button>
+          )
         }
       />
       {feedback && <Notice tone="success">{feedback}</Notice>}
@@ -410,37 +635,42 @@ export function MenuAdmin() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((dish) => (
-                <tr key={dish.id}>
-                  <td>
-                    <strong>{dish.name}</strong>
-                    <small>{dish.category}</small>
-                  </td>
-                  <td data-label="Giá" className="ext-table-price">
-                    {money(dish.price)}
-                  </td>
-                  <td data-label="Đặt trước">
-                    <Badge tone={dish.available ? 'success' : 'warning'}>
-                      {dish.available ? 'Còn món' : 'Tạm hết'}
-                    </Badge>
-                  </td>
-                  <td data-label="Công bố">
-                    <Badge tone={dish.published ? 'info' : undefined}>
-                      {dish.published ? 'Đang công bố' : 'Đang ẩn'}
-                    </Badge>
-                  </td>
-                  <td>
-                    <button
-                      className="button tertiary"
-                      type="button"
-                      onClick={() => setEditing(dish)}
-                      aria-label={`Sửa ${dish.name}`}
-                    >
-                      Chỉnh sửa <ArrowRight size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {shown.map((entry) => {
+                const { dish } = entry;
+                return (
+                  <tr key={dish.id}>
+                    <td>
+                      <strong>{dish.name}</strong>
+                      <small>{dish.category}</small>
+                    </td>
+                    <td data-label="Giá" className="ext-table-price">
+                      {money(dish.price)}
+                    </td>
+                    <td data-label="Đặt trước">
+                      <Badge tone={dish.available ? 'success' : 'warning'}>
+                        {dish.available ? 'Còn món' : 'Tạm hết'}
+                      </Badge>
+                    </td>
+                    <td data-label="Công bố">
+                      <Badge tone={dish.published ? 'info' : undefined}>
+                        {dish.published ? 'Đang công bố' : 'Đang ẩn'}
+                      </Badge>
+                    </td>
+                    <td>
+                      {canWrite && (
+                        <button
+                          className="button tertiary"
+                          type="button"
+                          onClick={() => setEditing(entry)}
+                          aria-label={`Sửa ${dish.name}`}
+                        >
+                          Chỉnh sửa <ArrowRight size={15} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ) : (
@@ -450,9 +680,16 @@ export function MenuAdmin() {
           />
         )}
       </Panel>
-      {editing !== null && (
+      {editing !== null && canWrite && (
         <DishEditor
           editing={editing}
+          categories={[...new Set(dishes.map((dish) => dish.category))]}
+          latest={
+            editing === 'new'
+              ? undefined
+              : items.find(({ dish }) => dish.id === editing.dish.id)
+          }
+          persist={persist}
           onClose={() => setEditing(null)}
           onSave={(message) => {
             setFeedback(message);
@@ -466,15 +703,23 @@ export function MenuAdmin() {
 
 function DishEditor({
   editing,
+  categories,
+  latest,
+  persist,
   onClose,
   onSave,
 }: {
-  editing: Dish | 'new';
+  editing: MenuEdit;
+  categories: string[];
+  latest: EditableMenuItem | undefined;
+  persist: SaveMenuItem;
   onClose: () => void;
   onSave: (message: string) => void;
 }) {
-  const { dishes, bookings, updateBooking, setDishes, role } = useRestaurant();
-  const dish = editing === 'new' ? undefined : editing;
+  const [baseline, setBaseline] = useState(
+    editing === 'new' ? undefined : editing,
+  );
+  const dish = baseline?.dish;
   const [name, setName] = useState(dish?.name ?? '');
   const [category, setCategory] = useState(dish?.category ?? '');
   const [price, setPrice] = useState(dish ? String(dish.price) : '');
@@ -482,21 +727,42 @@ function DishEditor({
   const [available, setAvailable] = useState(dish?.available ?? true);
   const [published, setPublished] = useState(dish?.published ?? false);
   const [error, setError] = useState('');
-  const { busy, submit } = usePreviewSubmit();
+  const version = baseline?.version ?? 1;
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const intent = useRef<{ fingerprint: string; key: string } | undefined>(
+    undefined,
+  );
 
-  const categories = [...new Set(dishes.map((item) => item.category))];
   const requiresDescription = dish?.description !== '';
   const affected =
     dish && (dish.published !== published || dish.available !== available);
 
-  function save(event: FormEvent) {
-    event.preventDefault();
+  function rebaseDraft(current: EditableMenuItem) {
+    if (!dish) return;
+    if (name.trim() === dish.name) setName(current.dish.name);
+    if (category.trim() === dish.category) setCategory(current.dish.category);
+    if (Number(price) === dish.price) setPrice(String(current.dish.price));
+    if (description.trim() === dish.description)
+      setDescription(current.dish.description);
+    if (available === dish.available) setAvailable(current.dish.available);
+    if (published === dish.published) setPublished(current.dish.published);
+    setBaseline(current);
     setError('');
+  }
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (saving.current) return;
+    setError('');
+    const priceVnd = Number(price);
     if (
       !name.trim() ||
       !category.trim() ||
       (requiresDescription && !description.trim()) ||
-      Number(price) < 1
+      !Number.isInteger(priceVnd) ||
+      priceVnd < 1 ||
+      priceVnd > 100_000_000
     ) {
       setError(
         requiresDescription
@@ -505,58 +771,50 @@ function DishEditor({
       );
       return;
     }
-    if (
-      role !== 'admin' ||
-      (dish && dishes.find((item) => item.id === dish.id) !== dish)
-    ) {
-      setError(
-        'Thông tin món hoặc quyền chỉnh sửa đã thay đổi. Mở lại món để kiểm tra.',
-      );
-      return;
-    }
-    const updated: Dish = {
-      id: dish?.id ?? `MON-${Date.now().toString(36)}`,
+    const draft: MenuDraft = {
       name: name.trim(),
       category: category.trim(),
-      price: Number(price),
+      price: priceVnd,
       description: description.trim(),
-      image: dish?.image,
       available,
       published,
     };
-    submit(() => {
-      if (dish && dish.price !== updated.price) {
-        for (const booking of bookings) {
-          if (
-            !booking.items.some(
-              (line) => line.dishId === dish.id && line.unitPrice === undefined,
-            )
-          )
-            continue;
-          updateBooking(booking.id, {
-            items: booking.items.map((line) =>
-              line.dishId === dish.id
-                ? { ...line, unitPrice: line.unitPrice ?? dish.price }
-                : line,
-            ),
-          });
-        }
-      }
-      setDishes((current) =>
-        dish
-          ? current.map((item) => (item.id === dish.id ? updated : item))
-          : [...current, updated],
+    const fingerprint = JSON.stringify([draft, version]);
+    if (menuUsesApi && intent.current?.fingerprint !== fingerprint)
+      intent.current = { fingerprint, key: crypto.randomUUID() };
+    saving.current = true;
+    setBusy(true);
+    try {
+      const updated = await persist(
+        baseline ?? 'new',
+        draft,
+        intent.current?.key ?? '',
       );
       onSave(
-        `Đã lưu ${updated.name}. ${published ? 'Thông tin mới đã hiện trên thực đơn.' : 'Món đã ẩn khỏi thực đơn.'}`,
+        `Đã lưu ${updated.name}. ${updated.published ? 'Thông tin mới đã hiện trên thực đơn.' : 'Món đã ẩn khỏi thực đơn.'}`,
       );
-    });
+    } catch (failure) {
+      setError(
+        failure instanceof ApiServiceError
+          ? failure.message
+          : menuUsesApi
+            ? 'Chưa lưu được món. Vui lòng thử lại.'
+            : failure instanceof Error
+              ? failure.message
+              : 'Chưa lưu được món.',
+      );
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
   }
 
   return (
     <Modal
       title={dish ? 'Chỉnh sửa món' : 'Thêm món mới'}
-      onClose={onClose}
+      onClose={() => {
+        if (!saving.current) onClose();
+      }}
       className="ext-dish-editor"
     >
       <form className="ext-form" onSubmit={save} aria-busy={busy}>
@@ -566,6 +824,7 @@ function DishEditor({
             value={name}
             onChange={(event) => setName(event.target.value)}
             maxLength={90}
+            disabled={busy}
             required
           />
         </Field>
@@ -577,6 +836,7 @@ function DishEditor({
               value={category}
               onChange={(event) => setCategory(event.target.value)}
               maxLength={60}
+              disabled={busy}
               required
             />
             <datalist id="ext-menu-categories">
@@ -592,6 +852,7 @@ function DishEditor({
               min={1}
               max={100000000}
               step={1}
+              disabled={busy}
               value={price}
               onChange={(event) => setPrice(event.target.value)}
               required
@@ -609,6 +870,7 @@ function DishEditor({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             maxLength={300}
+            disabled={busy}
             required={requiresDescription}
           />
         </Field>
@@ -617,6 +879,7 @@ function DishEditor({
             <input
               type="checkbox"
               checked={available}
+              disabled={busy}
               onChange={(event) => setAvailable(event.target.checked)}
             />{' '}
             Cho phép đặt trước
@@ -625,6 +888,7 @@ function DishEditor({
             <input
               type="checkbox"
               checked={published}
+              disabled={busy}
               onChange={(event) => setPublished(event.target.checked)}
             />{' '}
             Công bố trong thực đơn
@@ -637,8 +901,35 @@ function DishEditor({
           </Notice>
         )}
         {error && <FormError>{error}</FormError>}
+        {menuUsesApi && latest && latest.version > version && (
+          <Notice tone="warning">
+            <p>
+              Bản đã lưu là phiên bản {latest.version}. {latest.dish.name} ·{' '}
+              {latest.dish.category} · {money(latest.dish.price)}.
+            </p>
+            <p>
+              {latest.dish.published ? 'Đang công bố' : 'Đang ẩn'} ·{' '}
+              {latest.dish.available ? 'Nhận đặt trước' : 'Dừng nhận đặt trước'}
+              .
+            </p>
+            {latest.dish.description && <p>{latest.dish.description}</p>}
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => rebaseDraft(latest)}
+              disabled={busy}
+            >
+              Tiếp tục sửa trên phiên bản mới
+            </button>
+          </Notice>
+        )}
         <div className="ext-actions">
-          <button type="button" className="button secondary" onClick={onClose}>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={onClose}
+            disabled={busy}
+          >
             Đóng
           </button>
           <button className="button" type="submit" disabled={busy}>

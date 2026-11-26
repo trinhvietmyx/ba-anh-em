@@ -29,20 +29,30 @@ import {
 } from '../features/operations/operations';
 import { Empty } from '../shared/ui';
 import { PublicLayout } from '../app/public-layout';
+import { useRestaurant } from '../app/restaurant-context';
+import { menuUsesApi } from '../services/menu-api';
 
 function RoutePosition() {
   const { pathname } = useLocation();
+  const { retryMenu } = useRestaurant();
   const lastPath = useRef(pathname);
   useEffect(() => {
     if (lastPath.current === pathname) return;
     lastPath.current = pathname;
+    if (
+      menuUsesApi &&
+      ['', '/thuc-don', '/dat-ban/chon-mon', '/tro-ly'].includes(
+        pathname.replace(/\/$/, ''),
+      )
+    )
+      retryMenu();
     window.scrollTo(0, 0);
     if (!document.querySelector('dialog[open]')) {
       document
         .querySelector<HTMLElement>('#prototype-content, #ops-main')
         ?.focus({ preventScroll: true });
     }
-  }, [pathname]);
+  }, [pathname, retryMenu]);
   return null;
 }
 
@@ -81,6 +91,9 @@ export function AppRoutes() {
           <Route path="*" element={<Recovery />} />
         </Route>
         <Route path="van-hanh/dang-nhap" element={<OpsSignIn />} />
+        {menuUsesApi && (
+          <Route path="van-hanh/thuc-don" element={<MenuAdmin />} />
+        )}
         <Route path="van-hanh" element={<OpsLayout />}>
           <Route index element={<Navigate to="dat-cho" replace />} />
           <Route path="dat-cho" element={<OpsList />} />
@@ -89,7 +102,7 @@ export function AppRoutes() {
           <Route path="chuan-bi-bep" element={<OpsKitchen />} />
           <Route path="dat-coc" element={<OpsDeposits />} />
           <Route path="bao-cao" element={<OpsReports />} />
-          <Route path="thuc-don" element={<MenuAdmin />} />
+          {!menuUsesApi && <Route path="thuc-don" element={<MenuAdmin />} />}
           <Route path="dat-cho/:id/doi-huy" element={<ChangeBooking />} />
           <Route path="dat-tiec" element={<EventOperations />} />
           <Route path="danh-gia" element={<ReviewOperations />} />

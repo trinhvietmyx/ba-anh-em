@@ -27,10 +27,10 @@
 
 Khách có thể kiểm tra khung giờ còn chỗ, đặt bàn và gửi món muốn dùng trước khi đến. Nhân sự dùng khu vực vận hành để theo dõi lượt đặt, bố trí bàn theo ca, xem món cần chuẩn bị và đối chiếu cọc.
 
-| Thành phần       | Phạm vi hiện tại                                                                                                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Web demo**     | Giao diện khách và vận hành chạy với dữ liệu mẫu trong bộ nhớ trình duyệt. Tải lại trang sẽ khôi phục trạng thái ban đầu. Trợ lý chat dùng quy tắc cục bộ và QR chỉ phục vụ minh họa.       |
-| **API nền tảng** | NestJS cung cấp health check, OpenAPI, phiên khách và đăng nhập nhân sự qua OIDC. PostgreSQL 17 lưu dữ liệu nền và phiên khi được cấu hình. Giao diện nghiệp vụ đang dùng dịch vụ mô phỏng. |
+| Thành phần    | Phạm vi hiện tại                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Web demo**  | Giao diện khách và vận hành chạy với dữ liệu mẫu trong bộ nhớ trình duyệt. Tải lại trang sẽ khôi phục trạng thái ban đầu. Trợ lý chat dùng quy tắc cục bộ và QR chỉ phục vụ minh họa. |
+| **API local** | NestJS cung cấp health check, OpenAPI, phiên khách, đăng nhập OIDC và quản lý thực đơn. Web có thể đọc và cập nhật thực đơn PostgreSQL khi cấu hình chế độ API.                       |
 
 Bản demo trong README được chạy ở local. Xem [bộ ảnh giao diện](#giao-dien) để khám phá sản phẩm hoặc [chạy bản demo](#cai-dat) để tương tác trực tiếp.
 
@@ -287,7 +287,7 @@ Trang chủ đưa khách vào luồng đặt bàn, thực đơn xếp món theo 
 
 ![Kiến trúc React và dịch vụ mô phỏng, NestJS và các tích hợp nguồn dữ liệu](docs/assets/diagrams/kien-truc-he-thong.svg)
 
-React Router phân tuyến khách và vận hành. TanStack Query đọc menu và lượt đặt từ dịch vụ mô phỏng, còn React Context giữ vai trò và trạng thái demo. Khi chạy local, Vite proxy các request `/api/v1` sang NestJS. Backend dùng Kysely nối PostgreSQL và có thể kết nối nhà cung cấp OIDC. [Mã tuyến web](apps/web/src/routes/index.tsx) · [Cấu hình Vite](apps/web/vite.config.ts) · [Điểm khởi động API](apps/api/src/api-app.ts)
+React Router phân tuyến khách và vận hành. TanStack Query đọc thực đơn và lượt đặt. Chế độ API đọc thực đơn từ NestJS và dùng quyền trong phiên nhân sự để quản lý món. Luồng đặt chỗ demo dùng dịch vụ mô phỏng. Khi chạy local, Vite proxy request `/api/v1` sang NestJS. Backend dùng Kysely nối PostgreSQL và có thể kết nối nhà cung cấp OIDC. [Mã tuyến web](apps/web/src/routes/index.tsx) · [Cấu hình Vite](apps/web/vite.config.ts) · [Điểm khởi động API](apps/api/src/api-app.ts)
 
 <a name="luong-dat-ban"></a>
 
@@ -381,7 +381,7 @@ npm run build -w @ba-anh-em/api
 npm run db:migrate -w @ba-anh-em/api
 ```
 
-Dùng database local mới khi từng áp dụng [DDL kiểm chứng](docs/design/BACKEND_SCHEMA.sql) thủ công. Kysely ghi nhận `001_base` và `002_auth` trong `ba_anh_em.kysely_migration`. Đặt `DATABASE_URL` cho role runtime riêng. Nếu role chưa có, DBA có thể chạy `CREATE ROLE ba_anh_em_runtime LOGIN;` và đặt mật khẩu qua `\password ba_anh_em_runtime` trong `psql`. Sau đó cấp quyền đọc nền:
+Dùng database local mới khi từng áp dụng [DDL kiểm chứng](docs/design/BACKEND_SCHEMA.sql) thủ công. Kysely ghi nhận `001_base`, `002_auth`, `003_menu` và `004_booking` trong `ba_anh_em.kysely_migration`. Đặt `DATABASE_URL` cho role runtime riêng. Nếu role chưa có, DBA có thể chạy `CREATE ROLE ba_anh_em_runtime LOGIN;` và đặt mật khẩu qua `\password ba_anh_em_runtime` trong `psql`. Sau đó cấp quyền đọc nền.
 
 ```sql
 GRANT USAGE ON SCHEMA ba_anh_em TO ba_anh_em_runtime;
@@ -398,18 +398,19 @@ GRANT SELECT ON ba_anh_em.venues, ba_anh_em.kysely_migration TO ba_anh_em_runtim
 
 Mẫu cấu hình đầy đủ nằm trong [`.env.example`](.env.example).
 
-| Biến                                                                          | Mục đích                                                                                                   |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                                                                    | `development` mặc định, `test` hoặc `production`. Production đọc môi trường của tiến trình và tắt Swagger. |
-| `API_HOST`, `API_PORT`                                                        | Địa chỉ IP và cổng NestJS, mặc định `127.0.0.1:3000`. Vite dùng `API_PORT` cho proxy local.                |
-| `API_CORS_ORIGINS`                                                            | Danh sách origin HTTP/HTTPS chính xác, phân cách bằng dấu phẩy. Để trống khi dùng proxy cùng origin.       |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`          | Cấu hình PostgreSQL local qua Compose.                                                                     |
-| `MIGRATION_DATABASE_URL`, `DATABASE_URL`                                      | Kết nối cho lệnh migration và kết nối riêng cho API lúc chạy.                                              |
-| `APP_ORIGIN`, `GUEST_SESSION_TTL_SECONDS`                                     | Origin của web cùng API và hạn phiên khách tính bằng giây.                                                 |
-| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                         | Thông tin nhà cung cấp OIDC khi bật đăng nhập nhân sự.                                                     |
-| `STAFF_VENUE_CODE`, `STAFF_SESSION_TTL_SECONDS`, `STAFF_SESSION_IDLE_SECONDS` | Mã nhà hàng, thời hạn phiên tuyệt đối và giới hạn không hoạt động tính bằng giây.                          |
-| `AUTH_RATE_LIMIT_PER_MINUTE`                                                  | Số yêu cầu mặc định **60** mỗi phút theo endpoint phiên và địa chỉ kết nối của từng tiến trình API.        |
-| `BAE_TEST_SEED_DATABASE_URL`                                                  | Kết nối có quyền ghi dành cho seed database dùng thử.                                                      |
+| Biến                                                                          | Mục đích                                                                                                                              |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                                                    | `development` mặc định, `test` hoặc `production`. Production đọc môi trường của tiến trình và tắt Swagger.                            |
+| `API_HOST`, `API_PORT`                                                        | Địa chỉ IP và cổng NestJS, mặc định `127.0.0.1:3000`. Vite dùng `API_PORT` cho proxy local.                                           |
+| `API_CORS_ORIGINS`                                                            | Danh sách origin HTTP/HTTPS chính xác, phân cách bằng dấu phẩy. Để trống khi dùng proxy cùng origin.                                  |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`          | Cấu hình PostgreSQL local qua Compose.                                                                                                |
+| `MIGRATION_DATABASE_URL`, `DATABASE_URL`                                      | Kết nối cho lệnh migration và kết nối riêng cho API lúc chạy.                                                                         |
+| `APP_ORIGIN`, `GUEST_SESSION_TTL_SECONDS`                                     | Origin của web cùng API và hạn phiên khách tính bằng giây.                                                                            |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                         | Thông tin nhà cung cấp OIDC khi bật đăng nhập nhân sự.                                                                                |
+| `STAFF_VENUE_CODE`, `STAFF_SESSION_TTL_SECONDS`, `STAFF_SESSION_IDLE_SECONDS` | Mã nhà hàng, thời hạn phiên tuyệt đối và giới hạn không hoạt động tính bằng giây.                                                     |
+| `AUTH_RATE_LIMIT_PER_MINUTE`                                                  | Số yêu cầu mặc định **60** mỗi phút theo endpoint phiên hoặc thực đơn, địa chỉ kết nối và tiến trình API khi cấu hình phiên được bật. |
+| `MENU_VENUE_CODE`, `VITE_MENU_SOURCE`                                         | Mã nhà hàng chứa danh mục và chế độ nguồn thực đơn của web. Đặt `VITE_MENU_SOURCE=api` để dùng PostgreSQL.                            |
+| `BAE_TEST_SEED_DATABASE_URL`                                                  | Kết nối có quyền ghi dành cho seed database dùng thử.                                                                                 |
 
 <details>
 <summary><strong>Bật phiên khách hoặc đăng nhập nhân sự bằng API</strong></summary>
@@ -430,21 +431,66 @@ Các endpoint phiên trả `503` khi thiếu cấu hình hoặc kết nối DB. 
 
 </details>
 
+### Thử thực đơn PostgreSQL trên local
+
+1. Dùng một database thử có tên kết thúc bằng `_test` hoặc `_test_<id>`. Sau khi migrate, đặt `NODE_ENV=test` và `BAE_TEST_SEED_DATABASE_URL` cho database thử, chạy `npm run db:seed:test -w @ba-anh-em/api` rồi `npm run db:seed:menu:test -w @ba-anh-em/api`. Lệnh menu nạp danh mục mẫu từ web và giữ lại chỉnh sửa đã lưu khi seed lại.
+2. Đặt `MENU_VENUE_CODE=BAE-TEST-FIXTURE`, `VITE_MENU_SOURCE=api` và `DATABASE_URL` của role runtime. Sau khi cấp quyền đọc bên dưới, mở `/thuc-don`. Cả Vite dev và lệnh build đọc `VITE_MENU_SOURCE` từ môi trường hoặc `.env` gốc.
+3. Để quản lý qua `/van-hanh/thuc-don`, bật OIDC ở cùng origin và dùng `STAFF_VENUE_CODE` trùng `MENU_VENUE_CODE`. Cấp `menu.read` để xem danh mục, và thêm `menu.write` để lưu. Cấp phần quyền ghi cho role runtime theo hướng dẫn bên dưới.
+
+```sql
+GRANT SELECT ON ba_anh_em.menu_items TO ba_anh_em_runtime;
+GRANT INSERT ON ba_anh_em.menu_items TO ba_anh_em_runtime;
+GRANT SELECT, INSERT ON ba_anh_em.menu_write_keys TO ba_anh_em_runtime;
+GRANT UPDATE (name, category, price_vnd, description, available, published, version, updated_at)
+    ON ba_anh_em.menu_items TO ba_anh_em_runtime;
+```
+
+Món mới có mã do server cấp. Màn hình cho sửa tên, nhóm, giá, mô tả, khả dụng và công bố. Việc nạp ảnh và danh mục chính thức theo nguồn do nhà hàng xác nhận ở Q-09. Các lần ghi đồng thời dùng phiên bản món. Nếu mất phản hồi trong form đang mở, nút lưu dùng lại khóa của cùng nội dung. Thời gian lưu khóa gửi lại sẽ theo chính sách vận hành được duyệt. API thực đơn giới hạn mặc định 60 yêu cầu/phút cho từng endpoint và địa chỉ kết nối trên mỗi tiến trình.
+
+### Thử đặt bàn trên PostgreSQL local
+
+1. Chạy migration trên database thử có tên kết thúc bằng `_test` hoặc `_test_<id>`. Với `NODE_ENV=test` và `BAE_TEST_SEED_DATABASE_URL` trỏ đúng DB thử, chạy `npm run db:seed:test -w @ba-anh-em/api` và `npm run db:seed:booking:test -w @ba-anh-em/api`.
+2. Cấu hình `BOOKING_TEST_ENABLED=1`, `VITE_BOOKING_SOURCE=api`, `APP_ORIGIN` và `GUEST_SESSION_TTL_SECONDS`. API đặt bàn thử yêu cầu máy chủ và PostgreSQL qua loopback, URL DB không chứa tham số, venue `BAE-TEST-FIXTURE` và múi giờ `Asia/Ho_Chi_Minh`.
+3. Cấp quyền đọc nền, quyền phiên khách và các quyền đặt bàn thử cho role runtime. Sau đó mở `/dat-ban`, kiểm tra khung giờ và dùng nút **Dùng thông tin mẫu**.
+
+```sql
+GRANT SELECT ON ba_anh_em.dining_tables, ba_anh_em.service_rules,
+    ba_anh_em.service_day_overrides, ba_anh_em.service_override_windows TO ba_anh_em_runtime;
+GRANT SELECT, INSERT ON ba_anh_em.reservations, ba_anh_em.table_allocations,
+    ba_anh_em.guest_reservation_grants, ba_anh_em.operation_keys TO ba_anh_em_runtime;
+GRANT INSERT ON ba_anh_em.reservation_contacts, ba_anh_em.reservation_events TO ba_anh_em_runtime;
+GRANT UPDATE (status, status_reason, version, updated_at) ON ba_anh_em.reservations TO ba_anh_em_runtime;
+GRANT UPDATE (state, released_at) ON ba_anh_em.table_allocations TO ba_anh_em_runtime;
+GRANT EXECUTE ON FUNCTION ba_anh_em.lock_booking_venue(uuid) TO ba_anh_em_runtime;
+```
+
+Lịch mẫu mở từ 11:00 đến 22:00. Ca thử dùng bước 30 phút, lượt ăn 90 phút, tối đa 10 khách trong 60 ngày và một bàn đủ chỗ cho mỗi lượt. Bàn được giữ tối đa 15 phút và hết hiệu lực chậm nhất vào giờ bắt đầu lượt. Các giá trị này phục vụ kiểm chứng local. Khi mất phản hồi, form cho kiểm tra kết quả và gửi lại cùng khóa trong phiên. Món trước và VietQR sẽ kết nối ở các bước riêng.
+
+Khi chạy Playwright với database thử đã seed và role runtime trên, đặt `BAE_E2E_BOOKING=1` cùng `BAE_TEST_DATABASE_URL` để kiểm form, phục hồi và đọc lại lượt.
+
 <a name="api"></a>
 
 ## API
 
 Prefix của API là `/api/v1`. Bảng dưới đây liệt kê các endpoint trong OpenAPI sinh từ NestJS.
 
-| Method   | Đường dẫn sau prefix | Chức năng                                                                                          |
-| -------- | -------------------- | -------------------------------------------------------------------------------------------------- |
-| `GET`    | `/health/live`       | Kiểm tra tiến trình API đang phản hồi.                                                             |
-| `GET`    | `/health/ready`      | Kiểm PostgreSQL 17, quyền đọc dữ liệu nền và các migration. Trả `503 NOT_READY` nếu chưa sẵn sàng. |
-| `POST`   | `/guest/session`     | Cấp hoặc khôi phục phiên khách và trả CSRF token.                                                  |
-| `GET`    | `/ops/auth/login`    | Bắt đầu đăng nhập qua OIDC.                                                                        |
-| `GET`    | `/ops/auth/callback` | Xử lý phản hồi OIDC, tạo phiên nhân sự và chuyển hướng.                                            |
-| `GET`    | `/ops/session`       | Đọc phiên nhân sự và quyền theo nhà hàng.                                                          |
-| `DELETE` | `/ops/session`       | Kết thúc phiên nhân sự.                                                                            |
+| Method   | Đường dẫn sau prefix          | Chức năng                                                                                          |
+| -------- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| `GET`    | `/health/live`                | Kiểm tra tiến trình API đang phản hồi.                                                             |
+| `GET`    | `/health/ready`               | Kiểm PostgreSQL 17, quyền đọc dữ liệu nền và các migration. Trả `503 NOT_READY` nếu chưa sẵn sàng. |
+| `POST`   | `/guest/session`              | Cấp hoặc khôi phục phiên khách và trả CSRF token.                                                  |
+| `GET`    | `/ops/auth/login`             | Bắt đầu đăng nhập qua OIDC.                                                                        |
+| `GET`    | `/ops/auth/callback`          | Xử lý phản hồi OIDC, tạo phiên nhân sự và chuyển hướng.                                            |
+| `GET`    | `/ops/session`                | Đọc phiên nhân sự và quyền theo nhà hàng.                                                          |
+| `DELETE` | `/ops/session`                | Kết thúc phiên nhân sự.                                                                            |
+| `GET`    | `/menu`                       | Đọc món đã công bố và tình trạng khả dụng.                                                         |
+| `GET`    | `/ops/menu`                   | Đọc danh mục vận hành và phiên bản từng món.                                                       |
+| `POST`   | `/ops/menu`                   | Thêm món và nhận mã từ server.                                                                     |
+| `PUT`    | `/ops/menu/{dishId}`          | Cập nhật món theo phiên bản.                                                                       |
+| `GET`    | `/availability`               | Kiểm tra khung giờ và sức chứa cho ngày và số khách.                                               |
+| `POST`   | `/reservations`               | Lưu lượt đặt thử, cấp quyền cho phiên khách và giữ bàn tạm.                                        |
+| `GET`    | `/reservations/{id}`          | Đọc lại lượt của phiên khách.                                                                      |
+| `GET`    | `/guest/reservation-attempts` | Đọc kết quả đã commit theo khóa lần gửi.                                                           |
 
 Swagger UI nằm ở `/api/v1/docs` và tài liệu JSON nằm ở `/api/v1/openapi.json` ngoài production. Phản hồi API có `X-Trace-Id` để đối chiếu log. [Ảnh Swagger local](docs/assets/screenshots/desktop/swagger-api.webp) · [OpenAPI hiện hành](packages/api-contract/generated/openapi.json) · [Hướng dẫn hợp đồng](packages/api-contract/README.md)
 
@@ -478,7 +524,7 @@ npm run test:e2e
 ```
 
 - **Tích hợp** dùng `BAE_TEST_DATABASE_URL` cho readiness và `BAE_TEST_POSTGRES_ADMIN_URL` cho các ca migration, phiên và phân quyền trên cluster thử nghiệm. Suite phiên dùng IdP giả lập.
-- **Playwright** tự chạy Vite và NestJS trên cổng loopback `5317` và `3310`. Có thể đổi bằng `BAE_E2E_WEB_PORT` và `BAE_E2E_API_PORT`. Mặc định smoke test kiểm liveness `200` và readiness `503` khi chưa có DB. Với DB thử đã migrate và quyền phiên khách, đặt `BAE_TEST_DATABASE_URL` cùng `BAE_E2E_GUEST_SESSION=1` để chạy ca cookie.
+- **Playwright** tự chạy Vite và NestJS trên cổng loopback `5317` và `3310`. Có thể đổi bằng `BAE_E2E_WEB_PORT` và `BAE_E2E_API_PORT`. Mặc định smoke test kiểm liveness `200` và readiness `503` khi chưa có DB. Với DB thử đã migrate và quyền phiên khách, đặt `BAE_TEST_DATABASE_URL` cùng `BAE_E2E_GUEST_SESSION=1` để chạy ca cookie. Để kiểm thử giao diện thực đơn, seed danh mục trên database thử, đặt `BAE_E2E_MENU=1`, `BAE_E2E_MENU_ADMIN_URL` cho vai trò chuẩn bị phiên kiểm thử và `BAE_TEST_DATABASE_URL` cho runtime có quyền thực đơn.
 - **Hợp đồng API** được tạo lại bằng `npm run contract:generate` sau khi thay đổi route hoặc dữ liệu trả về. [Hướng dẫn sinh hợp đồng](packages/api-contract/README.md)
 
 [GitHub Actions](.github/workflows/ci.yml) định nghĩa kiểm tra chất lượng, bí mật trong Git, dependency, build, hợp đồng, test tích hợp PostgreSQL 17 và smoke test. Để chuẩn bị triển khai, dùng `npm run build`, phục vụ `apps/web/dist` với SPA fallback, chạy `npm run start -w @ba-anh-em/api` và cấu hình reverse proxy chuyển `/api/v1` sang NestJS. Khi bật phiên, triển khai web và API cùng origin qua HTTPS. [Lộ trình staging và phát hành](docs/superpowers/plans/2026-11-25-backend-roadmap.md)
@@ -487,7 +533,7 @@ npm run test:e2e
 
 ## Định hướng phát triển
 
-- Kết nối NestJS với các luồng thực đơn, sức chứa, đặt bàn, món trước, phân bàn, bếp và báo cáo.
+- Kết nối NestJS với các luồng sức chứa, đặt bàn, món trước, phân bàn, bếp và báo cáo.
 - Nối đăng nhập vận hành với phiên OIDC và áp dụng quyền trên API nghiệp vụ.
 - Kiểm chứng Groq và VietQR trên staging theo cấu hình được duyệt, bổ sung kiểm thử các tình huống trùng bàn và đối chiếu cọc.
 - Hoàn thiện luồng tiệc, đánh giá và công cụ nghiệp vụ của chat theo phạm vi được duyệt.

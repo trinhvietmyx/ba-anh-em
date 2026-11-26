@@ -17,9 +17,17 @@ import {
   Plus,
   Users,
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { DishDetails } from '../menu/catalog';
 import { useRestaurant } from '../../app/restaurant-context';
+import {
+  bookingApi,
+  bookingUsesApi,
+  type NewBooking,
+  type SavedBooking,
+} from '../../services/booking-api';
+import { ApiServiceError } from '../../services/contracts';
 import {
   availableTimes,
   bookingOpen,
@@ -46,7 +54,7 @@ import {
   Status,
 } from '../../shared/ui';
 
-function useMockAction() {
+function useMockAction(delay = 440) {
   const timer = useRef<number | undefined>(undefined);
   const [busy, setBusy] = useState(false);
 
@@ -61,7 +69,7 @@ function useMockAction() {
         () => setBusy(false),
         () => setBusy(false),
       );
-    }, 440);
+    }, delay);
   }
 
   return { busy, run };
@@ -115,6 +123,14 @@ type FormErrors = Partial<
   Record<'date' | 'time' | 'name' | 'phone' | 'general', string>
 >;
 
+const localDay = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+type BookingAttempt = { key: string; payload: NewBooking; csrfToken?: string };
+
 export function BookingPage() {
   const { key, state } = useLocation();
   const handoff = (state as { draft?: Partial<BookingDraft> } | null)?.draft;
@@ -125,20 +141,42 @@ export function BookingPage() {
 function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
   const { bookings, createBooking, scenario } = useRestaurant();
   const nav = useNavigate();
+  const minimumDay = bookingUsesApi ? localDay.format(new Date()) : DEMO_DATE;
   const [draft, setDraft] = useState<BookingDraft>(() => ({
     ...defaultDraft,
     ...handoff,
-    source: handoff?.source ?? 'web',
+    ...(bookingUsesApi
+      ? {
+          source: 'web',
+          date:
+            handoff?.date && handoff.date >= minimumDay
+              ? handoff.date
+              : minimumDay,
+          time: '',
+        }
+      : {}),
   }));
   const [step, setStep] = useState(0);
-  const [checked, setChecked] = useState(Boolean(handoff?.time));
+  const [checked, setChecked] = useState(
+    !bookingUsesApi && Boolean(handoff?.time),
+  );
+  const [serverSlots, setServerSlots] = useState<
+    Array<{ time: string; available: boolean }>
+  >([]);
   const [blockedTime, setBlockedTime] = useState('');
-  const [uncertain, setUncertain] = useState(false);
+  const [recovery, setRecovery] = useState<'none' | 'unknown' | 'session-lost'>(
+    'none',
+  );
+  const uncertain = recovery !== 'none';
   const [errors, setErrors] = useState<FormErrors>({});
-  const { busy, run } = useMockAction();
+  const { busy, run } = useMockAction(bookingUsesApi ? 0 : 440);
+  const attempt = useRef<BookingAttempt | null>(null);
   const formError = useRef<HTMLDivElement>(null);
   const stepHeading = useRef<HTMLHeadingElement>(null);
-  const slots = availableTimes(bookings, draft.date, draft.guests);
+  const slots = bookingUsesApi
+    ? serverSlots
+    : availableTimes(bookings, draft.date, draft.guests);
+  const demoEmpty = !bookingUsesApi && scenario === 'empty';
   const hasSlot = slots.some(
     (slot) => slot.available && slot.time !== blockedTime,
   );
@@ -170,13 +208,142 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
   }
 
   function checkSlots() {
-    if (!draft.date || draft.date < DEMO_DATE) {
-      setErrors({ date: `Chọn ngày từ ${displayDate(DEMO_DATE)} trở đi.` });
+    if (!draft.date || draft.date < minimumDay) {
+      setErrors({ date: `Chọn ngày từ ${displayDate(minimumDay)} trở đi.` });
       return;
     }
     setErrors({});
     setChecked(false);
-    run(() => setChecked(true));
+    run(async () => {
+      if (bookingUsesApi) {
+        try {
+          setServerSlots(
+            (await bookingApi.availability(draft.date, draft.guests)).slots,
+          );
+        } catch {
+          setErrors({
+            general: 'Chưa kiểm tra được khung giờ. Vui lòng thử lại.',
+          });
+          return;
+        }
+      }
+      setChecked(true);
+    });
+  }
+
+  function openResult(booking: SavedBooking) {
+    attempt.current = null;
+    nav(`/dat-ban/ket-qua?id=${encodeURIComponent(booking.id)}`);
+  }
+
+  async function sendReservation(current: BookingAttempt) {
+    setErrors({});
+    if (!current.csrfToken) {
+      try {
+        current.csrfToken = (await bookingApi.session()).csrfToken;
+      } catch {
+        attempt.current = null;
+        setErrors({
+          general: 'Chưa thiết lập được phiên khách. Vui lòng thử lại.',
+        });
+        return;
+      }
+    }
+    try {
+      openResult(
+        await bookingApi.create(
+          current.payload,
+          current.key,
+          current.csrfToken,
+        ),
+      );
+    } catch (error) {
+      if (
+        error instanceof ApiServiceError &&
+        [
+          'CAPACITY_UNAVAILABLE',
+          'SLOT_CLOSED',
+          'BOOKING_WINDOW_CLOSED',
+        ].includes(error.code)
+      ) {
+        attempt.current = null;
+        setRecovery('none');
+        setDraft((previous) => ({ ...previous, time: '' }));
+        setChecked(false);
+        setErrors({ general: error.message });
+        go(0);
+        try {
+          setServerSlots(
+            (
+              await bookingApi.availability(
+                current.payload.date,
+                current.payload.guests,
+              )
+            ).slots,
+          );
+          setChecked(true);
+        } catch {
+          // The existing check button can refresh the chosen date again.
+        }
+        return;
+      }
+      if (error instanceof ApiServiceError) {
+        if (error.status === 401 && recovery === 'unknown') {
+          setRecovery('session-lost');
+          setErrors({
+            general:
+              'Phiên khách đã hết hạn. Lượt trước có thể đã được ghi nhận.',
+          });
+          return;
+        }
+        if (
+          recovery === 'none' &&
+          [400, 401, 403, 422, 429].includes(error.status)
+        ) {
+          attempt.current = null;
+          setErrors({ general: error.message });
+          return;
+        }
+        if (recovery === 'unknown' && error.status === 403) {
+          setErrors({
+            general:
+              'Lần gửi lại bị từ chối. Hãy kiểm tra kết quả của lần trước.',
+          });
+        }
+      }
+      setRecovery('unknown');
+    }
+  }
+
+  function startNewReservation() {
+    attempt.current = null;
+    setRecovery('none');
+    setErrors({});
+    setDraft((current) => ({ ...current, time: '' }));
+    setChecked(false);
+    go(0);
+  }
+
+  function recoverReservation() {
+    const current = attempt.current;
+    if (!current || busy) return;
+    run(async () => {
+      try {
+        openResult(await bookingApi.attempt(current.key));
+      } catch (error) {
+        const status =
+          error instanceof ApiServiceError ? error.status : undefined;
+        if (status === 401) setRecovery('session-lost');
+        setErrors({
+          general:
+            status === 404
+              ? 'Chưa thấy kết quả. Bạn có thể kiểm tra lại hoặc gửi lại cùng yêu cầu.'
+              : status === 401
+                ? 'Phiên khách đã hết hạn. Lượt trước có thể đã được ghi nhận.'
+                : 'Chưa kiểm tra được kết quả. Vui lòng thử lại.',
+        });
+      }
+    });
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -201,6 +368,24 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
       setErrors(issues);
       if (!Object.keys(issues).length) go(2);
     } else {
+      if (bookingUsesApi) {
+        const current = attempt.current ?? {
+          key: crypto.randomUUID(),
+          payload: {
+            date: draft.date,
+            time: draft.time,
+            guests: draft.guests,
+            contact: {
+              name: draft.name.trim(),
+              phone: draft.phone.replace(/\s/g, ''),
+            },
+            note: draft.note.trim(),
+          },
+        };
+        attempt.current = current;
+        run(() => sendReservation(current));
+        return;
+      }
       run(async () => {
         const booking =
           scenario === 'slot-conflict' && !blockedTime
@@ -219,7 +404,7 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
           });
           go(0);
         } else if (scenario === 'lost-response') {
-          setUncertain(true);
+          setRecovery('unknown');
         } else {
           nav('/dat-ban/ket-qua');
         }
@@ -292,7 +477,7 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
                       <input
                         className="input"
                         type="date"
-                        min={DEMO_DATE}
+                        min={minimumDay}
                         value={draft.date}
                         disabled={busy}
                         aria-invalid={Boolean(errors.date)}
@@ -344,7 +529,7 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
                   </div>
                   {busy && <Loading label="Đang kiểm tra khung giờ…" />}
                   {checked &&
-                    (scenario === 'empty' || !hasSlot ? (
+                    (demoEmpty || !hasSlot ? (
                       <Empty
                         title="Không còn giờ trống"
                         description="Thử chọn ngày khác hoặc đổi số khách."
@@ -372,7 +557,7 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
                         </div>
                       </fieldset>
                     ))}
-                  {checked && scenario !== 'empty' && hasSlot && (
+                  {checked && !demoEmpty && hasSlot && (
                     <div className="form-actions">
                       <button className="button" type="submit">
                         Tiếp tục <ArrowRight size={17} />
@@ -391,7 +576,7 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
                     <input
                       className="input"
                       name="name"
-                      autoComplete="name"
+                      autoComplete={bookingUsesApi ? 'off' : 'name'}
                       value={draft.name}
                       maxLength={80}
                       aria-invalid={Boolean(errors.name)}
@@ -415,7 +600,7 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
                       className="input"
                       inputMode="tel"
                       name="tel"
-                      autoComplete="tel"
+                      autoComplete={bookingUsesApi ? 'off' : 'tel'}
                       value={draft.phone}
                       maxLength={18}
                       aria-invalid={Boolean(errors.phone)}
@@ -506,15 +691,49 @@ function BookingForm({ handoff }: { handoff?: Partial<BookingDraft> }) {
                         Chưa rõ yêu cầu đã được ghi nhận. Kiểm tra kết quả trước
                         khi gửi lại.
                       </Notice>
-                      <Link className="button" to="/dat-ban/ket-qua">
-                        Kiểm tra kết quả <ArrowRight size={17} />
-                      </Link>
+                      {recovery === 'session-lost' ? (
+                        <button
+                          type="button"
+                          className="button"
+                          onClick={startNewReservation}
+                          disabled={busy}
+                        >
+                          Bắt đầu yêu cầu mới
+                        </button>
+                      ) : bookingUsesApi ? (
+                        <div className="form-actions">
+                          <button
+                            type="button"
+                            className="button"
+                            onClick={recoverReservation}
+                            disabled={busy}
+                          >
+                            Kiểm tra kết quả
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            onClick={() => {
+                              const current = attempt.current;
+                              if (current) run(() => sendReservation(current));
+                            }}
+                            disabled={busy}
+                          >
+                            Gửi lại cùng yêu cầu
+                          </button>
+                        </div>
+                      ) : (
+                        <Link className="button" to="/dat-ban/ket-qua">
+                          Kiểm tra kết quả <ArrowRight size={17} />
+                        </Link>
+                      )}
                     </>
                   ) : (
                     <>
                       <Notice>
-                        Bàn được giữ tạm trong khi chờ xác minh tiền cọc mẫu{' '}
-                        {money(DEPOSIT_AMOUNT)}.
+                        {bookingUsesApi
+                          ? 'Lượt này dùng để thử quy trình giữ bàn. Hãy dùng thông tin mẫu.'
+                          : `Bàn được giữ tạm trong khi chờ xác minh tiền cọc mẫu ${money(DEPOSIT_AMOUNT)}.`}
                       </Notice>
                       {busy && <Loading label="Đang gửi yêu cầu…" />}
                       <div className="form-actions">
@@ -1044,6 +1263,85 @@ export function DepositPage() {
 }
 
 export function BookingResult() {
+  const [search] = useSearchParams();
+  const reference = search.get('id');
+  if (bookingUsesApi && reference)
+    return <SavedBookingResult reference={reference} />;
+  return <DemoBookingResult />;
+}
+
+function SavedBookingResult({ reference }: { reference: string }) {
+  const result = useQuery({
+    queryKey: ['booking', 'guest-result', reference],
+    queryFn: ({ signal }) => bookingApi.get(reference, signal),
+    retry: false,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'pending' ? 30_000 : false,
+  });
+  if (result.isPending)
+    return (
+      <div className="container public-page">
+        <Loading label="Đang tải kết quả đặt bàn…" />
+      </div>
+    );
+  if (result.isError) {
+    const status =
+      result.error instanceof ApiServiceError ? result.error.status : undefined;
+    const inaccessible = status === 401 || status === 404;
+    return (
+      <div className="container public-page">
+        <Empty
+          title={
+            inaccessible
+              ? 'Không tìm thấy lượt trong phiên này'
+              : 'Chưa tải được kết quả'
+          }
+          action={
+            inaccessible ? (
+              <Link className="button" to="/">
+                Về trang chủ
+              </Link>
+            ) : (
+              <button
+                className="button"
+                type="button"
+                onClick={() => void result.refetch()}
+              >
+                Thử lại
+              </button>
+            )
+          }
+        />
+      </div>
+    );
+  }
+  const booking = result.data;
+  return (
+    <div className="container public-page result-page">
+      <PageHead
+        title={
+          booking.statusReason === 'HOLD_EXPIRED'
+            ? 'Lượt giữ bàn đã hết hạn'
+            : 'Kết quả đặt bàn thử'
+        }
+        description={`Mã tham chiếu ${booking.id}`}
+      />
+      <GuestSummary draft={booking}>
+        <Status value={booking.status} kind="booking" />
+        {booking.status === 'pending' && (
+          <Notice>Bàn đang được giữ tạm cho lượt đặt thử.</Notice>
+        )}
+        <Link className="button" to="/">
+          Về trang chủ
+        </Link>
+      </GuestSummary>
+    </div>
+  );
+}
+
+function DemoBookingResult() {
   const { activeBooking: booking, dishes } = useRestaurant();
   if (!booking) return needBooking();
   const open = bookingOpen(booking);

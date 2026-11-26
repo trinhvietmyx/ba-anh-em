@@ -67,7 +67,9 @@ ba-anh-em/
 - `apps/api/src/main.ts` nạp cấu hình local, kiểm biến môi trường và khởi động. `api-app.ts` lắp prefix `/api/v1`, giới hạn JSON, CORS, biên lỗi, validation, log và OpenAPI local. `app.module.ts` lắp các module và provider.
 - API dùng CommonJS với phân giải TypeScript `NodeNext` trên Node.js 24 để dùng được các package ESM của NestJS 12 và giữ Jest cho backend theo kế hoạch. [Hướng dẫn NestJS 12](https://docs.nestjs.com/migration-guide#esm-packages).
 - `modules/auth/` vận hành phiên khách, đăng nhập nhân sự OIDC, giới hạn tần suất và kiểm quyền theo nhà hàng. Lịch, sức chứa và giao dịch giữ bàn thuộc miền `booking`. Các adapter Groq và VietQR thuộc `chat` và `deposits`.
-- `platform/` chứa cấu hình, kết nối DB, health check và xử lý HTTP dùng chung. Liveness kiểm tiến trình. Readiness kiểm PostgreSQL 17, quyền đọc bảng nền và lịch sử migration `001_base`, `002_auth`.
+- `modules/menu/` đọc thực đơn công bố cho khách và phục vụ thao tác quản lý có quyền theo nhà hàng. Dữ liệu mẫu thực đơn được seed từ danh mục của web vào database thử.
+- `modules/booking/` tính khung giờ từ lịch và sức chứa, giữ bàn trong transaction và cho phiên khách đọc lại lượt. Lát đặt bàn hiện chạy với dữ liệu thử local.
+- `platform/` chứa cấu hình, kết nối DB, health check và xử lý HTTP dùng chung. Liveness kiểm tiến trình. Readiness kiểm PostgreSQL 17, quyền đọc bảng nền và lịch sử migration từ `001_base` đến `004_booking`.
 - `src/platform/db/` chứa CLI, các migration TypeScript, fixture và trình kiểm tra tệp bố trí. `apps/api/db/` dành cho tệp dữ liệu nhập và tài sản database ngoài mã.
 - `test/integration/` dùng trình chạy test của Node cho HTTP, PostgreSQL 17 và OIDC giả lập. `BAE_TEST_DATABASE_URL` bật ca readiness. `BAE_TEST_POSTGRES_ADMIN_URL` bật ca migration và phiên trên database test cô lập. Jest chạy unit test trong `src/`.
 

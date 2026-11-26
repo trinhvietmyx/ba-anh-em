@@ -18,7 +18,7 @@ test('migration CLI requires a separate migration URL', () => {
 });
 
 test(
-  'applies the foundation and auth once and seeds a stable fixture',
+  'applies the foundation, auth and menu once and seeds a stable fixture',
   withPostgres,
   async (t) => {
     const { client, url } = await temporaryDatabase(t);
@@ -38,6 +38,8 @@ test(
     assert.deepEqual(versions.rows, [
       { name: '001_base' },
       { name: '002_auth' },
+      { name: '003_menu' },
+      { name: '004_booking' },
     ]);
     const extension = await client.query(
       "SELECT extname FROM pg_extension WHERE extname = 'btree_gist'",
@@ -114,7 +116,7 @@ test(
     assert.equal(
       (await client.query('SELECT name FROM ba_anh_em.kysely_migration'))
         .rowCount,
-      2,
+      4,
     );
   },
 );

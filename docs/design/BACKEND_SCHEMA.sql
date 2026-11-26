@@ -149,6 +149,18 @@ CREATE TABLE staff_login_attempts (
     expires_at timestamptz NOT NULL
 );
 
+CREATE TABLE menu_write_keys (
+    venue_id uuid NOT NULL REFERENCES venues (id),
+    staff_user_id uuid NOT NULL REFERENCES staff_users (id),
+    operation text NOT NULL CHECK (operation IN ('create', 'update')),
+    request_key text NOT NULL CHECK (char_length(request_key) BETWEEN 16 AND 128),
+    request_digest bytea NOT NULL CHECK (octet_length(request_digest) = 32),
+    menu_item_id uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (venue_id, staff_user_id, operation, request_key),
+    FOREIGN KEY (venue_id, menu_item_id) REFERENCES menu_items (venue_id, id)
+);
+
 CREATE TABLE reservations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     venue_id uuid NOT NULL REFERENCES venues (id),

@@ -11,6 +11,8 @@
     "test:integration": "npm run build && node --test \"test/integration/*.test.cjs\"",
     "db:migrate": "node dist/platform/db/database-cli.js migrate",
     "db:seed:test": "node dist/platform/db/database-cli.js seed-test",
+    "db:seed:menu:test": "node dist/platform/db/database-cli.js seed-menu-test",
+    "db:seed:booking:test": "node dist/platform/db/database-cli.js seed-booking-test",
     "db:validate:import": "node dist/platform/db/database-cli.js validate-import"
   },
   "dependencies": {

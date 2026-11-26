@@ -1648,6 +1648,3283 @@
           "Phiên"
         ]
       }
+    },
+    "/api/v1/menu": {
+      "get": {
+        "operationId": "listPublishedMenu",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Danh mục công bố.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120,
+                            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 160
+                          },
+                          "category": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "price": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "description": {
+                            "type": "string",
+                            "maxLength": 4000
+                          },
+                          "image": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "published": {
+                            "type": "boolean",
+                            "enum": [
+                              true
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "category",
+                          "price",
+                          "description",
+                          "image",
+                          "available",
+                          "published"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất của endpoint.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Nguồn thực đơn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Đọc thực đơn đã công bố",
+        "tags": [
+          "Thực đơn"
+        ]
+      }
+    },
+    "/api/v1/ops/menu": {
+      "get": {
+        "operationId": "listOpsMenu",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Danh mục vận hành.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "dish": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120,
+                                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 160
+                              },
+                              "category": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                              },
+                              "price": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "description": {
+                                "type": "string",
+                                "maxLength": 4000
+                              },
+                              "image": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 2048
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "available": {
+                                "type": "boolean"
+                              },
+                              "published": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "category",
+                              "price",
+                              "description",
+                              "image",
+                              "available",
+                              "published"
+                            ]
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 2147483647
+                          }
+                        },
+                        "required": [
+                          "dish",
+                          "version"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu phiên nhân sự hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Yêu cầu bị từ chối.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất của endpoint.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Nguồn thực đơn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "StaffCookie": []
+          }
+        ],
+        "summary": "Đọc danh mục quản lý thực đơn",
+        "tags": [
+          "Thực đơn"
+        ]
+      },
+      "post": {
+        "operationId": "createOpsMenuItem",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Origin của ứng dụng.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._~-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 90,
+                    "pattern": "\\S"
+                  },
+                  "category": {
+                    "type": "string",
+                    "maxLength": 60,
+                    "pattern": "\\S"
+                  },
+                  "price": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "pattern": "\\S"
+                  },
+                  "available": {
+                    "type": "boolean"
+                  },
+                  "published": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "category",
+                  "price",
+                  "description",
+                  "available",
+                  "published"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Món đã tạo hoặc kết quả gửi lại.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dish": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120,
+                          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        },
+                        "category": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "price": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        "image": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 2048
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "available": {
+                          "type": "boolean"
+                        },
+                        "published": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "category",
+                        "price",
+                        "description",
+                        "image",
+                        "available",
+                        "published"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    }
+                  },
+                  "required": [
+                    "dish",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mã món hoặc khóa gửi lại không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu phiên nhân sự hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Yêu cầu bị từ chối.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột phiên bản hoặc khóa gửi lại.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dữ liệu món không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất của endpoint.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Nguồn thực đơn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "StaffCookie": [],
+            "CsrfToken": []
+          }
+        ],
+        "summary": "Tạo món",
+        "tags": [
+          "Thực đơn"
+        ]
+      }
+    },
+    "/api/v1/ops/menu/{dishId}": {
+      "put": {
+        "operationId": "updateOpsMenuItem",
+        "parameters": [
+          {
+            "name": "dishId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Origin của ứng dụng.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._~-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "item": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 90,
+                        "pattern": "\\S"
+                      },
+                      "category": {
+                        "type": "string",
+                        "maxLength": 60,
+                        "pattern": "\\S"
+                      },
+                      "price": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000000
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "published": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "category",
+                      "price",
+                      "description",
+                      "available",
+                      "published"
+                    ]
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "item"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Món và phiên bản hiện tại.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dish": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120,
+                          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        },
+                        "category": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "price": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        "image": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 2048
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "available": {
+                          "type": "boolean"
+                        },
+                        "published": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "category",
+                        "price",
+                        "description",
+                        "image",
+                        "available",
+                        "published"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    }
+                  },
+                  "required": [
+                    "dish",
+                    "version"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mã món hoặc khóa gửi lại không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu phiên nhân sự hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Yêu cầu bị từ chối.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy món trong nhà hàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột phiên bản hoặc khóa gửi lại.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dữ liệu món không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất của endpoint.\n\nĐã vượt giới hạn tần suất của endpoint.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.\n\nLỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Nguồn thực đơn chưa sẵn sàng.\n\nNguồn thực đơn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "StaffCookie": [],
+            "CsrfToken": []
+          }
+        ],
+        "summary": "Lưu thông tin và trạng thái món",
+        "tags": [
+          "Thực đơn"
+        ]
+      }
+    },
+    "/api/v1/availability": {
+      "get": {
+        "operationId": "getAvailability",
+        "parameters": [
+          {
+            "name": "time",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            }
+          },
+          {
+            "name": "guests",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tình trạng từng khung theo lịch local.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
+                    },
+                    "guests": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    "timeZone": {
+                      "type": "string"
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "time": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "anyOf": [
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "CAPACITY_UNAVAILABLE",
+                                  "SLOT_CLOSED",
+                                  "BOOKING_WINDOW_CLOSED"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "time",
+                          "startsAt",
+                          "available",
+                          "reason"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "guests",
+                    "timeZone",
+                    "slots"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dữ liệu hoặc khung giờ không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Chế độ thử đặt bàn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tra khung giờ cho ngày và số khách",
+        "tags": [
+          "Đặt chỗ"
+        ]
+      }
+    },
+    "/api/v1/reservations": {
+      "post": {
+        "operationId": "createReservation",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Origin của ứng dụng.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._~-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "format": "date"
+                  },
+                  "time": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                  },
+                  "guests": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  },
+                  "contact": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 80
+                      },
+                      "phone": {
+                        "type": "string",
+                        "minLength": 7,
+                        "maxLength": 24,
+                        "pattern": "^\\+?[0-9 ().-]+$"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "phone"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "date",
+                  "time",
+                  "guests",
+                  "contact"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lượt đã ghi hoặc kết quả gửi lại của phiên.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z0-9][A-Z0-9-]{0,63}$"
+                    },
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
+                    },
+                    "time": {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "guests": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "web",
+                        "chat"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "confirmed",
+                        "arrived",
+                        "completed",
+                        "no-show",
+                        "cancelled"
+                      ]
+                    },
+                    "statusReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    },
+                    "tables": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    },
+                    "preorderTotal": {
+                      "type": "integer",
+                      "enum": [
+                        0
+                      ]
+                    },
+                    "deposit": {
+                      "type": "null"
+                    },
+                    "nextActions": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "time",
+                    "startsAt",
+                    "endsAt",
+                    "guests",
+                    "source",
+                    "status",
+                    "statusReason",
+                    "version",
+                    "items",
+                    "tables",
+                    "preorderTotal",
+                    "deposit",
+                    "nextActions"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mã lượt hoặc khóa gửi lại không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu phiên khách hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin hoặc CSRF không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy kết quả trong phiên.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột sức chứa hoặc khóa gửi lại.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Dữ liệu hoặc khung giờ không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Chế độ thử đặt bàn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "GuestCookie": [],
+            "CsrfToken": []
+          }
+        ],
+        "summary": "Tạo lượt đặt thử",
+        "tags": [
+          "Đặt chỗ"
+        ]
+      }
+    },
+    "/api/v1/reservations/{id}": {
+      "get": {
+        "operationId": "getGuestReservation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9][A-Z0-9-]{0,63}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kết quả của lượt đặt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z0-9][A-Z0-9-]{0,63}$"
+                    },
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
+                    },
+                    "time": {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "guests": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "web",
+                        "chat"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "confirmed",
+                        "arrived",
+                        "completed",
+                        "no-show",
+                        "cancelled"
+                      ]
+                    },
+                    "statusReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    },
+                    "tables": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    },
+                    "preorderTotal": {
+                      "type": "integer",
+                      "enum": [
+                        0
+                      ]
+                    },
+                    "deposit": {
+                      "type": "null"
+                    },
+                    "nextActions": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "time",
+                    "startsAt",
+                    "endsAt",
+                    "guests",
+                    "source",
+                    "status",
+                    "statusReason",
+                    "version",
+                    "items",
+                    "tables",
+                    "preorderTotal",
+                    "deposit",
+                    "nextActions"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mã lượt hoặc khóa gửi lại không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu phiên khách hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy kết quả trong phiên.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Chế độ thử đặt bàn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "GuestCookie": []
+          }
+        ],
+        "summary": "Đọc lượt thuộc phiên khách",
+        "tags": [
+          "Đặt chỗ"
+        ]
+      }
+    },
+    "/api/v1/guest/reservation-attempts": {
+      "get": {
+        "operationId": "getReservationAttempt",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._~-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kết quả đã ghi của cùng lượt đặt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Z0-9][A-Z0-9-]{0,63}$"
+                    },
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "format": "date"
+                    },
+                    "time": {
+                      "type": "string",
+                      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "guests": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "web",
+                        "chat"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "confirmed",
+                        "arrived",
+                        "completed",
+                        "no-show",
+                        "cancelled"
+                      ]
+                    },
+                    "statusReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    },
+                    "tables": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    },
+                    "preorderTotal": {
+                      "type": "integer",
+                      "enum": [
+                        0
+                      ]
+                    },
+                    "deposit": {
+                      "type": "null"
+                    },
+                    "nextActions": {
+                      "type": "array",
+                      "maxItems": 0,
+                      "items": {}
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "time",
+                    "startsAt",
+                    "endsAt",
+                    "guests",
+                    "source",
+                    "status",
+                    "statusReason",
+                    "version",
+                    "items",
+                    "tables",
+                    "preorderTotal",
+                    "deposit",
+                    "nextActions"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mã lượt hoặc khóa gửi lại không hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thiếu phiên khách hợp lệ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy kết quả trong phiên.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Đã vượt giới hạn tần suất.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi xử lý nội bộ.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Chế độ thử đặt bàn chưa sẵn sàng.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    },
+                    "fields": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "traceId",
+                    "retryable"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "GuestCookie": []
+          }
+        ],
+        "summary": "Phục hồi kết quả đã ghi từ khóa lần gửi",
+        "tags": [
+          "Đặt chỗ"
+        ]
+      }
     }
   },
   "info": {
@@ -1664,6 +4941,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "__Host-bae_staff"
+      },
+      "GuestCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-bae_guest"
       },
       "CsrfToken": {
         "type": "apiKey",

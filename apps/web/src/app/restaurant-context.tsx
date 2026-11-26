@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   type Dispatch,
@@ -19,6 +20,7 @@ import {
   type Scenario,
 } from '../shared/model.ts';
 import { createMockRestaurantApi } from '../services/mock-restaurant-api.ts';
+import { menuApi, publishedMenuKey, menuUsesApi } from '../services/menu-api';
 
 const menuQueryKey = ['restaurant', 'menu'] as const;
 const reservationsQueryKey = ['restaurant', 'reservations'] as const;
@@ -26,6 +28,8 @@ const reservationsQueryKey = ['restaurant', 'reservations'] as const;
 interface RestaurantContextValue {
   bookings: Booking[];
   dishes: Dish[];
+  menuStatus: 'loading' | 'ready' | 'error';
+  retryMenu(): void;
   setDishes: Dispatch<SetStateAction<Dish[]>>;
   draftQuantities: Record<string, number>;
   setDraftQuantities: Dispatch<SetStateAction<Record<string, number>>>;
@@ -65,12 +69,19 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   });
   const [activeId, setActiveId] = useState<string | null>(null);
   const menu = useQuery({
-    queryKey: menuQueryKey,
-    queryFn: () => api.getMenu(),
-    initialData: DISHES,
-    staleTime: Infinity,
+    queryKey: menuUsesApi ? publishedMenuKey : menuQueryKey,
+    queryFn: ({ signal }) =>
+      menuUsesApi ? menuApi.listPublished(signal) : api.getMenu(),
+    initialData: menuUsesApi ? undefined : DISHES,
+    staleTime: menuUsesApi ? 0 : Infinity,
+    retry: false,
     refetchOnMount: 'always',
+    refetchOnWindowFocus: menuUsesApi,
   });
+  const { refetch: refetchMenu } = menu;
+  const retryMenu = useCallback(() => {
+    void refetchMenu({ cancelRefetch: false });
+  }, [refetchMenu]);
   const reservations = useQuery({
     queryKey: reservationsQueryKey,
     queryFn: () => api.getReservations(),
@@ -80,6 +91,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   });
 
   function setDishes(action: SetStateAction<Dish[]>) {
+    if (menuUsesApi) return;
     const current = queryClient.getQueryData<Dish[]>(menuQueryKey) ?? DISHES;
     const next = typeof action === 'function' ? action(current) : action;
     queryClient.setQueryData(menuQueryKey, next);
@@ -89,10 +101,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   }
 
   function changeDraftQuantity(dishId: string, delta: 1 | -1) {
-    const dishes = menu.data ?? DISHES;
     if (
       delta > 0 &&
-      (scenario === 'empty' ||
+      ((!menuUsesApi && scenario === 'empty') ||
         !dishes.some(
           (dish) => dish.id === dishId && dish.published && dish.available,
         ))
@@ -132,13 +143,16 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   }
 
   const bookings = reservations.data ?? [];
-  const dishes = menu.data ?? [];
+  const menuLoading = menu.isPending || (menuUsesApi && menu.isFetching);
+  const dishes = menu.isSuccess && !menuLoading ? menu.data : [];
 
   return (
     <RestaurantContext.Provider
       value={{
         bookings,
         dishes,
+        menuStatus: menuLoading ? 'loading' : menu.isError ? 'error' : 'ready',
+        retryMenu,
         setDishes,
         draftQuantities,
         setDraftQuantities,

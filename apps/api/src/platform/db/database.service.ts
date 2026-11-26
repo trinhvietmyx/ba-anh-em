@@ -9,8 +9,10 @@ import { RUNTIME_CONFIG, type RuntimeConfig } from '../config/runtime-config';
 import { createDatabase, isPostgres17 } from './connection';
 import {
   AUTH_MIGRATION,
+  BOOKING_MIGRATION,
   DATABASE_SCHEMA,
   FOUNDATION_MIGRATION,
+  MENU_MIGRATION,
   MIGRATION_TABLE,
 } from './migration-history';
 
@@ -44,8 +46,8 @@ export class DatabaseService implements OnApplicationShutdown {
                  false
                )
                AND (
-                 SELECT count(*) = 2 FROM ${sql.table(`${DATABASE_SCHEMA}.${MIGRATION_TABLE}`)}
-                 WHERE name IN (${FOUNDATION_MIGRATION}, ${AUTH_MIGRATION})
+                 SELECT count(*) = 4 FROM ${sql.table(`${DATABASE_SCHEMA}.${MIGRATION_TABLE}`)}
+                 WHERE name IN (${FOUNDATION_MIGRATION}, ${AUTH_MIGRATION}, ${MENU_MIGRATION}, ${BOOKING_MIGRATION})
                ) AS ready
       `.execute(this.db);
       return result.rows[0]?.ready === true;

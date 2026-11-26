@@ -254,23 +254,23 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Mục tiêu** — Trang chủ, thực đơn, chi tiết và giỏ nháp dùng cùng danh mục công bố từ Backend.
 
-**Phụ thuộc và thứ tự** — Đọc công khai cần Bước 03–04 và dữ liệu Q-09. Quản lý cần thêm phiên và quyền ở Bước 05. Hoàn thành cả hai để đạt AC-01 và AC-20a của MVP.
+**Phụ thuộc và thứ tự** — Đọc công khai dùng nền Bước 03–04. Quản lý dùng phiên và quyền Bước 05. Đối chiếu AC-01 và AC-20a trên local bằng dữ liệu mẫu. Danh mục chính thức, IdP và phân quyền nhà hàng chờ xác nhận ở Q-08/Q-09.
 
 **Công việc**
 
-- [ ] Thêm bảng món và import danh mục có tên, nhóm, ảnh, giá VND, trạng thái công bố và khả dụng. Dùng public key hiện có để giữ liên kết món nổi bật và `?mon=`.
-- [ ] Triển khai `listPublishedMenu`, kiểm truy vấn chỉ trả món công bố và thứ tự ổn định. Giữ data công khai ở projection riêng.
-- [ ] Nối query menu trong `RestaurantProvider` qua adapter HTTP và kiểu contract. Kiểm thử `Home` và `Catalog` với dữ liệu thật từ fixture DB cùng trạng thái trống/lỗi.
-- [ ] Ghi tài liệu cách cập nhật menu được duyệt và cách tránh thay mã món, ảnh hoặc dữ liệu giá đã dùng để đối chiếu các dòng đặt trước.
-- [ ] Kiểm API quản lý từ phiên khách, nhân sự thiếu quyền, chỉ có `menu.read` và có cả quyền đọc/ghi. Kiểm danh mục công khai chỉ có món công bố. Thử giá ngoài giới hạn, trường lạ và sửa mã/ảnh qua body.
-- [ ] Triển khai `listForStaff`, `create` và `update` trong `MenuService` theo `listOpsMenu`, `createOpsMenuItem` và `updateOpsMenuItem` của OpenAPI. Dùng version dương, khóa gửi lại cùng transaction và cấp mã ổn định ở server. Khi cập nhật, khóa theo nhà hàng/món và giữ snapshot đã lưu. Ghi log thay đổi sau commit.
-- [ ] Nối `MenuAdmin` và `DishEditor` vào API, lấy quyền từ phiên, lưu phiên bản khi mở form và tạo khóa cho lần gửi. Làm mới cache danh mục vận hành và thực đơn công khai sau thành công. Khi xung đột giữ bản nháp để so lại dữ liệu. Khi lỗi ghi giữ thông báo và khả năng thử lại hiện có.
-- [ ] Chạy lại test và thử từ màn hình theo AC-20a. Tạo món ẩn, công bố, đổi giá và dừng nhận đặt. Kiểm thực đơn khách và cùng nguồn menu mà chatbot sẽ đọc. Gửi lại cùng khóa sau mất phản hồi và gửi hai lần sửa cùng phiên bản với hai khóa.
+- [x] Migration `003_menu` thêm bảng món và khóa gửi lại. Lệnh seed cho database test nạp danh mục mẫu và giữ mã `?mon=`, đường dẫn ảnh có sẵn và các sửa đổi đã lưu.
+- [x] `listPublishedMenu` trả món công bố theo thứ tự hiển thị rồi mã món, gồm trạng thái có thể đặt trước. `MenuService` xuất nguồn đọc cho module Chat ở Bước 12.
+- [x] `RestaurantProvider` đọc qua adapter HTTP có kiểu sinh từ OpenAPI khi chọn `VITE_MENU_SOURCE=api`. Web đọc lại khi mở trang thực đơn và khi quay lại tab. Có trạng thái tải, lỗi và rỗng.
+- [x] README ghi cấu hình nguồn danh mục, lệnh seed, quyền DB và phần trường có thể sửa. Mã và ảnh món giữ giá trị khi cập nhật.
+- [x] API đã kiểm thử quyền phiên khách, nhân sự thiếu quyền, có `menu.read`, và có cả quyền đọc/ghi. Kiểm giới hạn giá, trường lạ, sửa mã/ảnh và giới hạn tần suất.
+- [x] `listOpsMenu`, `createOpsMenuItem`, `updateOpsMenuItem` dùng quyền theo nhà hàng. Khóa gửi lại và thay đổi món dùng cùng transaction. Lần sửa kiểm phiên bản và ghi audit sau commit.
+- [x] `MenuAdmin` và `DishEditor` dùng phiên thật từ API khi bật chế độ API. Form lưu khóa cho cùng nội dung, cập nhật danh mục sau khi ghi và giữ bản nháp khi xung đột. Sau khi xác nhận dùng phiên bản mới, các trường chưa sửa nhận giá trị mới nhất.
+- [x] Kiểm thử local tạo món ẩn, công bố, đổi giá và tắt đặt trước từ màn hình. Mô phỏng mất phản hồi sau commit và thử lại cùng khóa. Kiểm hai bản sửa cùng phiên bản ở API và phục hồi bản nháp trên trình duyệt.
 
 **File và thư mục dự kiến**
 
-- Tạo `apps/api/src/modules/menu/menu.controller.ts`, `ops-menu.controller.ts`, `menu.dto.ts`, `menu.service.ts`, migration hậu tố `_menu.ts` và `apps/api/test/integration/menu.spec.ts`. Migration cấp mô hình quyền, còn bộ quyền của từng nhân sự lấy từ Q-08.
-- Nối `apps/web/src/app/restaurant-context.tsx`, `apps/web/src/features/extensions/extensions.tsx`, `apps/web/src/features/operations/operations.tsx`, `apps/web/src/services/restaurant-api.ts` dự kiến và `tests/e2e/menu.spec.ts`.
+- `apps/api/src/modules/menu/`, migration `003-menu.ts` và `apps/api/test/integration/menu.test.cjs` chứa route công bố và vận hành, lưu món và kiểm thử HTTP. Quyền từng nhân sự lấy từ Q-08.
+- `apps/web/src/app/restaurant-context.tsx`, `apps/web/src/features/extensions/extensions.tsx`, `apps/web/src/services/menu-api.ts` và `tests/e2e/menu.spec.ts` chứa kết nối dữ liệu thực đơn và kiểm thử trình duyệt. Route vận hành thực đơn dùng phiên OIDC khi chọn nguồn API.
 
 **Công nghệ và công cụ** — NestJS, PostgreSQL/Kysely, OpenAPI, TanStack Query, Jest/Supertest và Playwright.
 
@@ -278,9 +278,11 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Checklist nghiệm thu**
 
-- [ ] AC-01 đạt với món công bố còn nhận, món công bố tạm hết và món chưa công bố. Món nổi bật và mở chi tiết bằng mã ổn định vẫn chạy.
-- [ ] Lỗi đọc, tập dữ liệu rỗng và dữ liệu cache không được ghi nhận như thực đơn đã tải thành công. Món công bố được đọc giống nhau từ web và nguồn nội bộ của chat.
-- [ ] Qua phần quản lý của AC-20a, tài khoản đúng quyền lưu được từ màn hình và khách nhìn thấy kết quả công bố. Gửi lặp cùng khóa chỉ ghi một lần. Sửa đồng thời chỉ có một lần lưu từ cùng phiên bản. Bước 13 kiểm cả chatbot đã nối và snapshot của lượt cũ.
+- [x] Trên local, món công bố còn nhận và món công bố tạm hết xuất hiện đúng trạng thái, món ẩn chỉ hiện ở danh mục quản lý. Món nổi bật và liên kết chi tiết giữ mã cũ.
+- [x] Chromium phân biệt lỗi đọc và danh mục rỗng, tải lại danh mục khi điều hướng đến thực đơn và hiển thị thay đổi đã lưu. Chat demo đọc danh mục từ cùng provider. Module Groq sẽ dùng nguồn công bố phía server ở Bước 12.
+- [x] Qua phần quản lý của AC-20a, phiên kiểm thử đúng quyền lưu được từ màn hình và khách thấy kết quả. Gửi lặp cùng khóa chỉ ghi một lần. Sửa đồng thời chỉ có một lần lưu từ cùng phiên bản. Bước 13 kiểm cả chatbot đã nối và snapshot của lượt cũ.
+
+**Kết quả local · VERIFIED.** PostgreSQL 17.12 nạp 64 món mẫu. 28 ca tích hợp và 5 ca Chromium đạt. Chế độ `VITE_MENU_SOURCE=api` áp dụng cho cả dev lẫn build. Dữ liệu thực đơn chính thức và IdP của nhà hàng chờ xác nhận trước khi dùng thử. Chính sách lưu khóa gửi lại chờ Q-14/Q-15. [Cấu hình và kiểm thử local](../../../README.md#thử-thực-đơn-postgresql-trên-local)
 
 **Lỗi thường gặp và cách phòng tránh** — Đưa dữ liệu vận hành hoặc món ẩn vào API công khai, thay ID làm mất liên kết món hoặc lưu giỏ nháp như dữ liệu đã đặt. Dùng projection công khai và giữ public key.
 
@@ -290,20 +292,22 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Mục tiêu** — Tạo được lượt từ form hiện có, giữ nhất quán cam kết bàn và nhận biết cùng yêu cầu sau khi mất phản hồi.
 
-**Phụ thuộc và thứ tự** — Bước 03–05. Q-01–Q-03, Q-07 và Q-15 phải đủ để chốt lịch, phân bàn, chủ thể và xử lý lặp. Q-02 quyết định có ghép hoặc cam kết trước gán bàn.
+**Phụ thuộc và thứ tự** — Bước 03–05. Triển khai và kiểm chứng với dữ liệu thử local. Q-01–Q-03, Q-07 và Q-15 cần xác nhận trước khi dùng lịch, phân bàn, liên hệ và chính sách phục hồi của nhà hàng.
 
 **Công việc**
 
-- [ ] Viết rule thời gian từ lịch/ngoại lệ theo múi giờ đã duyệt. `getAvailability` lấy trạng thái có hiệu lực và trả khung thay thế đã kiểm.
-- [ ] Tạo bảng lượt, liên hệ, quyền lượt, phân bổ, sự kiện và khóa gửi lại. `createReservation` khóa nhà hàng và dùng cùng transaction cho kiểm lại, ghi lượt, cấp quyền, ghi audit và kết quả khóa. Dùng thời điểm DB sau khi lấy khóa để tính hết hạn.
-- [ ] Triển khai `getGuestReservation` và `getReservationAttempt` trong phạm vi phiên. Khi timeout, nút Kiểm tra kết quả đọc khóa lần gửi, còn thử lại lệnh ghi dùng cùng khóa và payload.
-- [ ] Nối ưu tiên `BookingPage` và `BookingResult` qua adapter. Dùng dữ liệu/API đã duyệt cho bước chọn giờ, báo xung đột và mã kết quả. Kiểm bằng web và hai kết nối DB độc lập.
-- [ ] Trong lát đặt bàn, chỉ công bố hành động phụ trợ khi module tương ứng đã sẵn sàng. Kiểm lại projection kết quả khi món và cọc có dữ liệu ở bước 08/10.
+- [x] `getAvailability` dùng lịch tuần, ngoại lệ, ca qua nửa đêm và giờ `Asia/Ho_Chi_Minh` của nhà hàng thử. Trả các khung cùng trạng thái sức chứa.
+- [x] `004_booking` thêm lượt, liên hệ, quyền theo phiên, phân bổ, sự kiện và khóa gửi lại. `createReservation` khóa hàng nhà hàng, lấy đồng hồ PostgreSQL, kiểm lại và ghi tất cả trong cùng transaction. GiST chặn chồng khoảng.
+- [x] `getGuestReservation` và `getReservationAttempt` kiểm phạm vi phiên và quyền theo lượt. Thử lại dùng cùng khóa và dữ liệu. Lỗi trước khi gửi, mất phản hồi tại bước gửi và hết phiên có cách xử lý riêng.
+- [x] `BookingPage` và `BookingResult` nối API khi bật `VITE_BOOKING_SOURCE=api`. Form tra khung và hiển thị xung đột. Trang kết quả đọc theo mã lượt, tải lại trạng thái giữ bàn trong tab đang mở.
+- [x] Trang kết quả đặt thử hiện thông tin đặt chỗ và tình trạng giữ bàn. Hành động đặt món trước và cọc thuộc Bước 08 và Bước 10.
 
 **File và thư mục dự kiến**
 
-- Tạo `apps/api/src/modules/booking/availability.service.ts`, `booking.service.ts`, `reservations.controller.ts`, `apps/api/src/platform/db/operation-keys.ts`, migration `_booking.ts` và `apps/api/test/integration/booking.spec.ts`.
-- Nối adapter web và các điểm gọi trong `apps/web/src/features/booking/booking.tsx`. Thêm `tests/e2e/booking-web.spec.ts`.
+- `apps/api/src/modules/booking/`, migration `004-booking.ts` và `apps/api/test/integration/booking.test.cjs` chứa API và kiểm thử địa phương.
+- `apps/web/src/services/booking-api.ts`, `apps/web/src/features/booking/booking.tsx` và `tests/e2e/booking-web.spec.ts` chứa kết nối UI, tiếp tục sau mất phản hồi và ca trình duyệt.
+
+**Giả định kiểm thử** — Chế độ API đặt thử chỉ bật trên loopback với database `_test`, venue mẫu và ngoài production. Fixture dùng bước 30 phút, lượt 90 phút, tối đa 10 khách trong 60 ngày, một bàn đủ chỗ và giữ tạm tối đa 15 phút. Khóa gửi lại có hiệu lực trong phiên khách gốc. Các giá trị vận hành chính thức vẫn cần được xác nhận.
 
 **Công nghệ và công cụ** — PostgreSQL 17, transaction Kysely, GiST exclusion, NestJS, Jest/Supertest và Playwright.
 
@@ -311,9 +315,11 @@ Khi kiểm một lát, chạy unit cho rule mới, rồi chạy integration/API 
 
 **Checklist nghiệm thu**
 
-- [ ] AC-02/03 đạt với ngày đóng, ngoài giờ nhận phục vụ và khung còn/hết, đồng thời tạo được lượt hợp lệ với đúng mã.
-- [ ] AC-04 đạt với hai transaction cạnh tranh và khoảng chồng dù khác giờ bắt đầu. Hai khoảng liền kề trong fixture `[11:00Z, 12:30Z)` và `[12:30Z, 14:00Z)` được xử lý đúng quy tắc khoảng đã duyệt.
-- [ ] AC-12/18 đạt với sai phiên, commit mất phản hồi, cùng khóa/cùng payload, cùng khóa/khác payload và hai ý định độc lập. Cùng yêu cầu có một mã, một lần ghi hiệu lực.
+- [x] Trên dữ liệu thử, kiểm ngày đóng, ngoài khung, ca qua nửa đêm, còn chỗ và tạo lượt có mã để đọc lại.
+- [x] Hai API dùng pool DB độc lập chỉ tạo một lượt khi tranh cùng bàn trên khoảng giao nhau. Hai khung liền kề đều ghi được. Khi cập nhật sức chứa giữ khóa hàng, lệnh đặt chờ rồi kiểm lại. Giữ hết hạn được bỏ qua khi tra, giải phóng khi ghi tiếp và ghi sự kiện.
+- [x] Kiểm sai phiên, thu hồi quyền lượt, commit mất phản hồi, cùng khóa/cùng payload, cùng khóa/khác payload, hai ý định độc lập và tách lỗi trước khi gửi. Trang kết quả cập nhật được tình trạng hết giữ trong cùng tab.
+
+**Kết quả local · VERIFIED.** 31 ca tích hợp PostgreSQL 17.12 và 10 ca Chromium đạt, gồm 5 ca giao diện đặt bàn. Cấu hình nhà hàng thực tế chờ xác nhận lịch, xếp bàn, thời hạn giữ, thông tin liên hệ và chính sách phục hồi. [Cách bật luồng đặt thử](../../../README.md#thử-đặt-bàn-trên-postgresql-local)
 
 **Lỗi thường gặp và cách phòng tránh** — Tin kết quả GET khả dụng như một cam kết, chạy kiểm và ghi ngoài cùng transaction, giải phóng bằng đồng hồ app hoặc tạo lại bằng khóa mới sau timeout. Kiểm lại dưới khóa DB, tách luồng đọc kết quả và giữ khóa qua retry.
 

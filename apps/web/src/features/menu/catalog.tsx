@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
 import { useRestaurant } from '../../app/restaurant-context';
+import { menuUsesApi } from '../../services/menu-api';
 import { MAX_DISH_QUANTITY, money, type Dish } from '../../shared/model';
 import { TemporaryBill } from '../preorder/temporary-bill';
 import { Badge, DishImage, Empty, Modal } from '../../shared/ui';
@@ -191,17 +192,26 @@ function CatalogCategories({
 }
 
 export function Catalog() {
-  const { dishes, scenario, setScenario } = useRestaurant();
+  const {
+    dishes,
+    scenario,
+    setScenario,
+    menuStatus: queryStatus,
+    retryMenu,
+  } = useRestaurant();
   const [params, setParams] = useSearchParams();
-  const [menuStatus, setMenuStatus] = useState<'loading' | 'ready' | 'error'>(
+  const [demoStatus, setDemoStatus] = useState<'loading' | 'ready' | 'error'>(
     'loading',
   );
+  const menuStatus = menuUsesApi ? queryStatus : demoStatus;
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('Tất cả');
   const categoryBar = useRef<HTMLDivElement>(null);
   const results = useRef<HTMLDivElement>(null);
   const visibleDishes =
-    scenario === 'empty' ? [] : dishes.filter((dish) => dish.published);
+    !menuUsesApi && scenario === 'empty'
+      ? []
+      : dishes.filter((dish) => dish.published);
   const categories = [
     'Tất cả',
     ...new Set(visibleDishes.map((dish) => dish.category)),
@@ -221,15 +231,15 @@ export function Catalog() {
       : undefined;
 
   useEffect(() => {
-    if (menuStatus !== 'loading') return;
+    if (menuUsesApi || demoStatus !== 'loading') return;
     const timer = window.setTimeout(
       () => {
-        setMenuStatus(scenario === 'menu-error' ? 'error' : 'ready');
+        setDemoStatus(scenario === 'menu-error' ? 'error' : 'ready');
       },
       scenario === 'menu-error' ? 360 : 160,
     );
     return () => window.clearTimeout(timer);
-  }, [menuStatus, scenario]);
+  }, [demoStatus, scenario]);
 
   function selectCategory(name: string) {
     setCategory(name);
@@ -251,7 +261,9 @@ export function Catalog() {
         <div className="container catalog-intro-inner">
           <div>
             <h1>Thực đơn</h1>
-            <p>Giá và tình trạng món dùng để thử đặt trước.</p>
+            {!menuUsesApi && (
+              <p>Giá và tình trạng món dùng để thử đặt trước.</p>
+            )}
           </div>
           <label className="catalog-search">
             <Search size={18} aria-hidden="true" />
@@ -307,8 +319,11 @@ export function Catalog() {
                 type="button"
                 className="button secondary"
                 onClick={() => {
-                  setScenario('normal');
-                  setMenuStatus('loading');
+                  if (menuUsesApi) retryMenu();
+                  else {
+                    setScenario('normal');
+                    setDemoStatus('loading');
+                  }
                   results.current?.focus({ preventScroll: true });
                 }}
               >
@@ -342,20 +357,24 @@ export function Catalog() {
             description={
               visibleDishes.length
                 ? 'Thử tên món khác hoặc đổi nhóm món.'
-                : 'Chọn «Xem tất cả món» để mở lại thực đơn mẫu.'
+                : menuUsesApi
+                  ? 'Nhà hàng chưa công bố món nào.'
+                  : 'Chọn «Xem tất cả món» để mở lại thực đơn mẫu.'
             }
             action={
-              <button
-                type="button"
-                className="button secondary"
-                onClick={() => {
-                  setQuery('');
-                  selectCategory('Tất cả');
-                  if (scenario === 'empty') setScenario('normal');
-                }}
-              >
-                Xem tất cả món
-              </button>
+              (visibleDishes.length > 0 || !menuUsesApi) && (
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => {
+                    setQuery('');
+                    selectCategory('Tất cả');
+                    if (scenario === 'empty') setScenario('normal');
+                  }}
+                >
+                  Xem tất cả món
+                </button>
+              )
             }
           />
         )}

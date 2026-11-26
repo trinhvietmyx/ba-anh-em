@@ -19,7 +19,7 @@ import {
   ApiTags,
   type ApiResponseOptions,
 } from '@nestjs/swagger';
-import { AuthRateLimitGuard } from './auth-rate-limit.guard';
+import { EndpointRateLimitGuard } from '../../platform/http/endpoint-rate-limit.guard';
 import { GuestSessionService } from './guest-session.service';
 import {
   GUEST_COOKIE,
@@ -131,7 +131,7 @@ function sessionResponse(
 
 @ApiTags('Phiên')
 @Controller()
-@UseGuards(AuthRateLimitGuard)
+@UseGuards(EndpointRateLimitGuard)
 export class AuthController {
   constructor(
     private readonly guests: GuestSessionService,

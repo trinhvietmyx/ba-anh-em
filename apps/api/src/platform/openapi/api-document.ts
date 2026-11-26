@@ -1,6 +1,9 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { STAFF_COOKIE } from '../../modules/auth/session-security';
+import {
+  GUEST_COOKIE,
+  STAFF_COOKIE,
+} from '../../modules/auth/session-security';
 
 export function createApiDocument(app: INestApplication) {
   const settings = new DocumentBuilder()
@@ -8,6 +11,7 @@ export function createApiDocument(app: INestApplication) {
     .setVersion('0.0.0')
     .setOpenAPIVersion('3.1.1')
     .addCookieAuth(STAFF_COOKIE, undefined, 'StaffCookie')
+    .addCookieAuth(GUEST_COOKIE, undefined, 'GuestCookie')
     .addApiKey(
       { type: 'apiKey', in: 'header', name: 'X-CSRF-Token' },
       'CsrfToken',

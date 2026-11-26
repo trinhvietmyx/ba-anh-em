@@ -7,16 +7,13 @@ import {
   type CanActivate,
   type ExecutionContext,
 } from '@nestjs/common';
-import {
-  RUNTIME_CONFIG,
-  type RuntimeConfig,
-} from '../../platform/config/runtime-config';
+import { RUNTIME_CONFIG, type RuntimeConfig } from '../config/runtime-config';
 
 const WINDOW_MS = 60_000;
 const MAX_BUCKETS = 4096;
 
 @Injectable()
-export class AuthRateLimitGuard implements CanActivate {
+export class EndpointRateLimitGuard implements CanActivate {
   private readonly buckets = new Map<
     string,
     { count: number; expiresAt: number }
@@ -26,13 +23,17 @@ export class AuthRateLimitGuard implements CanActivate {
   constructor(@Inject(RUNTIME_CONFIG) private readonly config: RuntimeConfig) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const rate = this.config.auth?.rateLimitPerMinute;
+    const rate =
+      this.config.auth?.rateLimitPerMinute ??
+      (this.config.menuVenueCode || this.config.bookingTestEnabled
+        ? 60
+        : undefined);
     if (!rate) return true;
 
     const http = context.switchToHttp();
     const peer =
       http.getRequest<IncomingMessage>().socket.remoteAddress ?? 'unknown';
-    const key = `${context.getHandler().name}:${peer}`;
+    const key = `${context.getClass().name}.${context.getHandler().name}:${peer}`;
     const now = Date.now();
     if (now >= this.nextSweep) {
       for (const [id, bucket] of this.buckets) {

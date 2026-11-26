@@ -8,6 +8,8 @@ import {
 import { Link } from 'react-router';
 import { DishCard } from '../menu/catalog';
 import { useRestaurant } from '../../app/restaurant-context';
+import { menuUsesApi } from '../../services/menu-api';
+import { Empty } from '../../shared/ui';
 import type { Dish } from '../../shared/model';
 import { TemporaryBill } from '../preorder/temporary-bill';
 import './home.css';
@@ -22,9 +24,9 @@ const featuredIds = [
 ];
 
 export function Home() {
-  const { dishes, scenario } = useRestaurant();
+  const { dishes, scenario, menuStatus, retryMenu } = useRestaurant();
   const featured =
-    scenario === 'empty'
+    !menuUsesApi && scenario === 'empty'
       ? []
       : featuredIds.flatMap((id) =>
           dishes.filter((dish) => dish.id === id && dish.published),
@@ -58,6 +60,22 @@ export function Home() {
       </section>
 
       {featured.length > 0 && <FeaturedDishes dishes={featured} />}
+      {menuUsesApi && menuStatus === 'error' && (
+        <div className="container home-featured">
+          <Empty
+            title="Chưa tải được thực đơn"
+            action={
+              <button
+                className="button secondary"
+                type="button"
+                onClick={retryMenu}
+              >
+                Thử lại
+              </button>
+            }
+          />
+        </div>
+      )}
 
       <section className="home-booking" aria-labelledby="home-booking-heading">
         <div className="home-booking-copy">
