@@ -2,6 +2,8 @@
 
 Ngày rà soát: 20/11/2026
 
+**Lưu trữ source:** Workspace `apps/prototype` được gỡ ngày 26/11/2026 sau khi xác minh archive `backups/approved-prototype-2026-11-26.zip` có đủ 194 tệp. Báo cáo này là hồ sơ audit lịch sử; các đường dẫn mã bên dưới thuộc bản đã lưu.
+
 ## 1. Tổng quan
 
 Prototype hiện triển khai giao diện khách hàng và khu vực vận hành bằng React, React Router và dữ liệu mô phỏng trong bộ nhớ. Các luồng chính gồm xem thực đơn, tạo lượt đặt bàn, chọn món trước, xem tiền cọc, tra cứu đặt chỗ, gửi yêu cầu đặt tiệc/đánh giá, và các màn hình vận hành theo vai trò Nhân viên hoặc Quản trị viên.

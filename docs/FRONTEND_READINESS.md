@@ -1,16 +1,18 @@
 # Frontend Readiness — Nhà hàng Ba Anh Em
 
-**Ngày rà soát:** 20/11/2026  
-**Phạm vi:** Chuẩn hóa workspace web từ Prototype được duyệt; chưa triển khai Backend, Database hay tích hợp API thật.  
+**Ngày rà soát ban đầu:** 20/11/2026
+
+**Phạm vi:** Chuẩn hóa workspace web từ Prototype được duyệt; chưa triển khai Backend, Database hay tích hợp API thật.
+
 **Kết luận:** Frontend chạy ổn định ở local với mock data và đã qua các quality gate hiện có. Chưa đủ điều kiện gọi là production-ready để nhận đặt chỗ hoặc giao dịch thật vì xác thực, API nghiệp vụ, OpenAPI được duyệt, xử lý dữ liệu bền vững và kiểm thử e2e/accessibility đầy đủ chưa có.
 
 ## 1. Hiện trạng và đối chiếu
 
-- Repo đã có `apps/web` React/Vite nhưng trước bước này chỉ là khung; giao diện 23 màn hình/biến thể nằm trong `apps/prototype`.
-- Đã chuyển giao diện và tài sản ảnh sang `apps/web`, giữ nguyên baseline trong `apps/prototype` để đối chiếu. Phong cách Lora/Be Vietnam Pro, màu sắc, bố cục và các luồng Prototype được giữ lại; không xây Backend hay DB.
+- Repo có `apps/web` React/Vite; giao diện 23 màn hình/biến thể đã được chuyển sang workspace này.
+- Source Prototype được lưu dự phòng tại `backups/approved-prototype-2026-11-26.zip` trên máy tạo archive. Bản ZIP nằm trong thư mục bị Git ignore; giao diện và tài sản ảnh phục vụ chạy ứng dụng hiện nằm trong `apps/web`.
 - Route khách và vận hành đã tách khỏi điểm khởi động. UI quản lý menu/đặt chỗ qua React Query và mock service. Fixture, model, HTTP transport và component UI dùng chung được tách riêng.
 - Bản nháp API hiện ở [`docs/design/api-contract.md`](docs/design/api-contract.md). Đây chưa phải OpenAPI đã duyệt. Các quyết định Q-01…Q-15 còn mở trong BRS vẫn được giữ là câu hỏi, không chuyển thành quy tắc triển khai.
-- `git status` hiện báo toàn bộ workspace là untracked, chưa có baseline tracked để xem diff trước/sau. Không xóa hoặc ghi đè source Prototype; không tạo commit trong bước này.
+- Ngày 26/11/2026, workspace `apps/prototype` được gỡ khỏi cấu hình npm và thư mục nguồn được xóa sau khi xác minh ZIP dự phòng chứa đủ 194 tệp.
 
 ### Đã hoàn thành trong bước này
 
@@ -21,7 +23,7 @@
 - `apps/web/src/mocks/`: fixture menu, đặt chỗ, sự kiện/đánh giá mẫu cùng test bảo toàn fixture.
 - `apps/web/src/services/`: kiểu lỗi/transport HTTP có cấu trúc, interface service và mock service cho menu/đặt chỗ.
 - Font, CSS, ảnh và meta trang được khai báo trong workspace web; không dùng toolbar dữ liệu thử của Prototype trong giao diện web.
-- Tách mẫu dữ liệu khỏi một số màn hình mở rộng, giữ source Prototype và workspace riêng không sửa/xóa.
+- Tách mẫu dữ liệu khỏi một số màn hình mở rộng; source trước chuyển đổi được giữ dưới dạng ZIP dự phòng cục bộ.
 
 ### Thành phần dùng chung có thể tái sử dụng
 
@@ -70,7 +72,7 @@ Danh sách dưới đây theo API outline mục 3.1 của `IMPLEMENTATION_PLAN.m
 
 ## 4. Kiểm thử và xác minh
 
-### Quality gates đã chạy
+### Quality gates đã chạy (mốc rà soát 20/11/2026)
 
 | Kiểm tra               | Kết quả                                  |
 | ---------------------- | ---------------------------------------- |
@@ -122,4 +124,11 @@ Danh sách dưới đây theo API outline mục 3.1 của `IMPLEMENTATION_PLAN.m
 npm run dev --workspace=@ba-anh-em/web
 ```
 
-Mở `http://127.0.0.1:5173`. Giao diện dùng mock data trong bộ nhớ; tải lại trang sẽ trở về fixtures. Chạy bản Prototype baseline bằng `npm run dev:prototype` (mặc định cổng `5180`). Lệnh root `npm run dev` khởi chạy web và API skeleton cùng lúc, nhưng web hiện chưa gọi API nghiệp vụ.
+Mở `http://127.0.0.1:5173`. Giao diện dùng mock data trong bộ nhớ; tải lại trang sẽ trở về fixtures. Workspace Prototype độc lập đã gỡ; bản lưu trữ chỉ dùng để phục hồi khi cần. Lệnh root `npm run dev` khởi chạy web và API cùng lúc.
+
+## Cập nhật lưu trữ 26/11/2026
+
+- Đã lưu bản ZIP kiểm tra được với 194 tệp tại `backups/approved-prototype-2026-11-26.zip`, rồi chuyển `apps/prototype` vào Recycle Bin. `apps/prototype` không còn trong workspace hay `node_modules`.
+- Gỡ script `dev:prototype`, cập nhật `package-lock.json` và các hướng dẫn. `npm ls --workspaces --depth=0` chỉ còn API, web và API contract. `npm ci --dry-run` đạt.
+- Sau khi gỡ: `format:check`, `lint`, `typecheck`, `test:unit` (34 test: API 25, web 9), `build` và `contract:check` đều đạt. Đường dẫn web `http://127.0.0.1:5173/van-hanh/dat-cho` trả HTTP 200.
+- Bản source trong Recycle Bin có thể khôi phục bằng Windows Recycle Bin; bản ZIP dự phòng vẫn nằm trong thư mục `backups/` bị Git ignore.

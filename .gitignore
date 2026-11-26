@@ -31,8 +31,8 @@ lerna-debug.log*
 # Local deployment metadata
 .vercel/
 
-# Private prototype retained locally
-/apps/prototype/
+# Local recovery archives; do not include in the source distribution
+/backups/
 
 # Editor settings and operating system files
 .idea/

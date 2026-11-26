@@ -351,7 +351,7 @@ npm run dev
 - **API** mặc định lắng nghe ở `127.0.0.1:3000`. Swagger mở tại [127.0.0.1:3000/api/v1/docs](http://127.0.0.1:3000/api/v1/docs).
 - Chạy riêng web bằng `npm run dev -w @ba-anh-em/web`, hoặc riêng API bằng `npm run dev -w @ba-anh-em/api`. Nếu cổng web mặc định đang bận, dùng `npm run dev -w @ba-anh-em/web -- --port 5174` trong terminal dành cho web.
 
-Workspace Prototype phục vụ đối chiếu được lưu riêng ngoài Git. Nếu máy đã có `apps/prototype`, có thể mở bằng `npm run dev:prototype`.
+Thư mục workspace `apps/prototype` đã được gỡ sau khi chuyển giao diện sang `apps/web`. Bản dự phòng cục bộ đã lưu tại `backups/approved-prototype-2026-11-26.zip`; thư mục `backups/` bị loại khỏi Git.
 
 <details>
 <summary><strong>Thiết lập PostgreSQL 17 cho backend</strong></summary>

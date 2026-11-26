@@ -1,6 +1,6 @@
 # Cấu trúc dự án Full Stack — Nhà hàng Ba Anh Em
 
-Cấu trúc nền được khởi tạo ở T05 trong [kế hoạch](IMPLEMENTATION_PLAN.md), dựa trên [BRS v0.1](BRS-Nha-hang-Ba-Anh-Em.md). Repo có npm workspaces cho web, API, prototype đã duyệt và package hợp đồng. `apps/web` dùng giao diện và lớp service ban đầu từ Prototype. T08 đã có OpenAPI sinh từ NestJS và smoke test API qua Vite proxy. Tích hợp xác thực nhân sự vào giao diện cần IdP và ma trận quyền đã được xác nhận.
+Cấu trúc nền được khởi tạo ở T05 trong [kế hoạch](IMPLEMENTATION_PLAN.md), dựa trên [BRS v0.1](BRS-Nha-hang-Ba-Anh-Em.md). Repo có npm workspaces cho web, API và package hợp đồng. Giao diện Prototype đã được chuyển sang `apps/web`; workspace `apps/prototype` đã xóa ngày 26/11/2026 sau khi tạo bản lưu trữ cục bộ. T08 đã có OpenAPI sinh từ NestJS và smoke test API qua Vite proxy. Tích hợp xác thực nhân sự vào giao diện cần IdP và ma trận quyền đã được xác nhận.
 
 ## Cây thư mục
 
@@ -8,7 +8,6 @@ Cấu trúc nền được khởi tạo ở T05 trong [kế hoạch](IMPLEMENTAT
 ba-anh-em/
 ├── .github/workflows/ci.yml
 ├── apps/
-│   ├── prototype/             # Bản Prototype đã duyệt, giữ làm baseline đối chiếu
 │   ├── api/
 │   │   ├── src/
 │   │   │   ├── main.ts
@@ -46,6 +45,7 @@ ba-anh-em/
 │   ├── runbooks/
 │   ├── IMPLEMENTATION_PLAN.md
 │   └── PROJECT_STRUCTURE.md
+├── backups/                   # ZIP phục hồi cục bộ; bị loại khỏi Git
 ├── .env.example
 ├── .node-version, .npmrc, .editorconfig, .gitignore
 ├── package.json, package-lock.json, tsconfig.base.json
@@ -60,7 +60,7 @@ ba-anh-em/
 - `apps/web/src/main.tsx` gắn React, font và CSS nền. `app/` lắp provider và layout; `routes/index.tsx` giữ route khách/vận hành đã duyệt.
 - `features/` nhóm màn hình theo miền: `home`, `menu`, `booking`, `preorder`, `chat`, `operations` và `extensions`. Các component và CSS hiện giữ phong cách Prototype; tiếp tục tách theo trách nhiệm khi có nhu cầu thực tế.
 - `services/` định nghĩa service, HTTP transport và mock service. `mocks/` lưu fixture dùng thử. `shared/` giữ model, quyền UI, component nền và CSS/token. TanStack Query quản lý cache menu/đặt chỗ đang nối qua mock service; các luồng còn lại chưa chuyển hết sang API.
-- `apps/prototype/` là baseline được phê duyệt để đối chiếu UI; không nhập thêm vào bundle web và không xóa trong giai đoạn chuẩn hóa.
+- Mã giao diện hiện tại nằm ở `apps/web`; bản Prototype trước chuyển đổi có thể phục hồi từ `backups/approved-prototype-2026-11-26.zip` trên máy tạo archive. ZIP không được commit hoặc đưa vào phát hành.
 
 ### Backend và database
 

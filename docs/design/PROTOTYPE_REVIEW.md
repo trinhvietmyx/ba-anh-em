@@ -2,7 +2,7 @@
 
 **Bản Prototype đã chốt · 20/11/2026**
 
-Prototype dùng React, TypeScript, React Router và Vite trong `apps/prototype/`. Giao diện áp dụng bảng màu từ ảnh Ba Anh Em được cung cấp, gồm nền kem ấm, nâu than, đỏ gạch và cam mật ong. Font chữ là Lora và Be Vietnam Pro. Các căn cứ thiết kế gồm [đặc tả UI/UX](UI_UX_SPECIFICATION.md), [design system](DESIGN_SYSTEM.md) và [danh sách màn hình](SCREEN_LIST.md).
+Prototype được dựng bằng React, TypeScript, React Router và Vite. Sau khi chuyển giao diện sang `apps/web`, workspace Prototype đã được gỡ ngày 26/11/2026; source trước chuyển đổi được lưu ở `backups/approved-prototype-2026-11-26.zip` trên máy tạo archive. Giao diện áp dụng bảng màu từ ảnh Ba Anh Em, gồm nền kem ấm, nâu than, đỏ gạch và cam mật ong. Font chữ là Lora và Be Vietnam Pro. Các căn cứ thiết kế gồm [đặc tả UI/UX](UI_UX_SPECIFICATION.md), [design system](DESIGN_SYSTEM.md) và [danh sách màn hình](SCREEN_LIST.md).
 
 **Trạng thái:** Người dùng đã chốt giao diện Prototype hiện tại làm baseline cho giai đoạn chuẩn hóa Frontend. Nội dung tài liệu này ghi lại phạm vi và giới hạn của bản đã duyệt; các checklist nghiệp vụ và production bên dưới vẫn cần xử lý ở giai đoạn tương ứng.
 
@@ -10,11 +10,11 @@ Xem [báo cáo audit và kiểm thử Prototype](../qa/PROTOTYPE_AUDIT.md) để
 
 ## 1. Mở prototype
 
-Địa chỉ local là [http://127.0.0.1:5180/](http://127.0.0.1:5180/). Nếu máy chủ chưa chạy, thực hiện tại thư mục gốc của repo với Node.js 24.x từ 24.16.0 và npm 11.x.
+Workspace Prototype không còn chạy trực tiếp. Giao diện hiện tại chạy trong [apps/web](../../apps/web/) tại `http://127.0.0.1:5173/`. Để phục hồi bản cũ, giải nén ZIP dự phòng vào `apps/prototype`, cài lại workspace bằng `npm install`, rồi khởi động workspace đó.
 
 ```sh
-npm ci
-npm run dev:prototype
+npm install
+npm run dev --workspace=@ba-anh-em/prototype
 ```
 
 Trên trang khách, bấm **Mở rộng** trong thanh điều hướng để mở danh sách **Tra cứu đặt chỗ**, **Đặt tiệc** và **Đánh giá**. Trên điện thoại, mục này nằm trong menu thu gọn. Bấm **Khu vực nhân viên** ở chân trang để vào vận hành trong cùng tab và đối chiếu dữ liệu vừa tạo. Admin thấy các mục quản trị trực tiếp trong sidebar; Nhân viên chỉ thấy các mục vận hành được phân quyền. Tải lại trang để bắt đầu lại với dữ liệu mẫu.
@@ -27,15 +27,9 @@ Trên trang khách, bấm **Mở rộng** trong thanh điều hướng để m�
 - **Tra cứu đặt chỗ** có dữ liệu mẫu `BAE-1042` và `0900000042`. **Đánh giá** có dữ liệu mẫu `BAE-1038` và `0900000038`.
 - **Thực đơn** dùng 60 ảnh từ bộ ảnh được cung cấp và giữ bốn ảnh minh họa ban đầu. Dùng dấu **+** ở thẻ món trên trang chủ hoặc thực đơn để chọn món. Hóa đơn tạm tính xuất hiện khi có món, cập nhật số phần và tổng tiền, rồi chuyển lựa chọn sang bước đặt bàn. Giá và tình trạng phục vụ là dữ liệu mẫu. “Sườn nướng” và “Trà trái cây” là tên tạm cho ảnh có tên tệp rút gọn.
 
-### Thử trạng thái ngoại lệ
+### Trạng thái ngoại lệ đã duyệt
 
-Mở một liên kết có tham số `kich-ban` để bắt đầu phiên dữ liệu mẫu tương ứng. Mở địa chỉ trang chủ thông thường để quay lại dữ liệu mặc định.
-
-- [Lỗi tải thực đơn](http://127.0.0.1:5180/thuc-don?kich-ban=menu-error) và [thực đơn trống](http://127.0.0.1:5180/thuc-don?kich-ban=empty).
-- [Khung giờ vừa hết chỗ](http://127.0.0.1:5180/dat-ban?kich-ban=slot-conflict) và [mất phản hồi khi gửi yêu cầu](http://127.0.0.1:5180/dat-ban?kich-ban=lost-response). Thử đến bước gửi yêu cầu.
-- [Lỗi tải QR](http://127.0.0.1:5180/dat-ban?kich-ban=qr-error) và [cọc đến sau hạn](http://127.0.0.1:5180/dat-ban?kich-ban=late-deposit). Đặt bàn rồi mở bước đặt cọc.
-- [Chat gián đoạn](http://127.0.0.1:5180/?kich-ban=chat-offline). Mở nút chat và gửi tin nhắn.
-- [Lỗi đăng nhập](http://127.0.0.1:5180/van-hanh/dang-nhap?kich-ban=ops-auth-error), [phiên hết hạn](http://127.0.0.1:5180/van-hanh/dang-nhap?kich-ban=ops-expired) và [lỗi tải danh sách đặt chỗ](http://127.0.0.1:5180/van-hanh/dang-nhap?kich-ban=ops-error).
+Các kịch bản dưới đây ghi lại những trạng thái từng có trong bản Prototype. Liên kết localhost cổng `5180` không còn hoạt động sau khi gỡ workspace. Để thử các kịch bản được hỗ trợ ở Frontend hiện tại, xem phần môi trường dev trong [README](../../README.md); một số trạng thái chỉ có trong bản lưu trữ.
 
 ## 2. Màn hình và chức năng đã mô phỏng
 

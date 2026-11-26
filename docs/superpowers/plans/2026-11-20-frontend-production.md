@@ -2,9 +2,9 @@
 
 > **For agentic workers:** Follow the task sequence and verify each deliverable before continuing.
 
-**Goal:** Promote the approved customer and operations interface into `apps/web` with maintainable feature boundaries and a replaceable mock/API layer while preserving the approved Prototype.
+**Goal:** Promote the approved customer and operations interface into `apps/web` with maintainable feature boundaries and a replaceable mock/API layer. The migration is complete; the original workspace is archived locally.
 
-**Architecture:** Keep `apps/prototype` as the approved reference. Build the live web application in `apps/web`, grouping UI by feature and shared components separately. Keep seed data and mock behavior out of UI components; expose a typed service boundary with mock and HTTP implementations, and mount routing and query providers at the application root.
+**Architecture:** Build the live web application in `apps/web`, grouping UI by feature and shared components separately. Keep seed data and mock behavior out of UI components; expose a typed service boundary with mock and HTTP implementations, and mount routing and query providers at the application root. The pre-migration source can be restored from the local archive noted in `docs/FRONTEND_READINESS.md`.
 
 **Tech Stack:** Existing React 19, TypeScript, Vite, React Router 7, Lucide, Be Vietnam Pro/Lora; TanStack Query 5 as listed in the implementation plan; Node test runner for focused service tests.
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Preserve the approved UI, routes, interactions, copy, colors, and behavior; do not redesign or change business policy.
-- Keep `apps/prototype` and its assets unchanged and recoverable.
+- Preserve the approved UI and keep a recoverable backup before removing the original workspace.
 - Do not implement backend/database or claim unresolved BRS decisions as settled.
 - Keep all mock data clearly separated from UI and services replaceable through a typed contract.
 - Do not claim production readiness while authentication, backend, and contract-generation dependencies remain incomplete.
@@ -41,7 +41,7 @@
 
 **Files:** Create production `app`, `features`, `shared`, `mocks`, and `services` modules under `apps/web/src`; update web entry, index metadata, and dependencies.
 
-- [ ] Copy the approved UI modules and styles from `apps/prototype` into feature-oriented production paths; leave the source Prototype untouched.
+- [x] Copy the approved UI modules and styles into feature-oriented production paths; archive the source before removing its workspace.
 - [ ] Extract shared model/access/UI and mock fixtures; remove demo-only chrome from the production app while retaining mock scenarios internally only where needed to exercise approved states.
 - [ ] Mount the existing router/layout through the production entry and add QueryClientProvider; keep current route paths and route access behavior.
 - [ ] Verify TypeScript, route loading, and visual parity on key public and operations pages.

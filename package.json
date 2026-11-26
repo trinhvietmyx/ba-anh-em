@@ -13,7 +13,6 @@
   ],
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names web,api \"npm run dev --workspace=@ba-anh-em/web\" \"npm run dev --workspace=@ba-anh-em/api\"",
-    "dev:prototype": "npm run dev --workspace=@ba-anh-em/prototype",
     "lint": "eslint \"apps/**/*.{ts,tsx}\"",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",

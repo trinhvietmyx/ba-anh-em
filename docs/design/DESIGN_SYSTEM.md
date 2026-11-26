@@ -17,7 +17,7 @@ Token theo ba lớp. Giá trị gốc xác định bảng màu. Token ngữ ngh�
 
 ### 2.1 Giá trị màu gốc
 
-Bảng màu lấy từ ảnh giao diện Ba Anh Em do người dùng cung cấp. Các biến CSS dành cho prototype nằm trong [styles.css](../../apps/prototype/src/styles.css).
+Bảng màu lấy từ ảnh giao diện Ba Anh Em do người dùng cung cấp. Các biến CSS đang áp dụng trong Frontend nằm trong [styles.css](../../apps/web/src/shared/styles.css). Source Prototype trước chuyển đổi được lưu trong bản ZIP cục bộ, không phải workspace đang chạy.
 
 | Vai trò                  | Giá trị | Vai trò                             | Giá trị |
 | ------------------------ | ------- | ----------------------------------- | ------- |
