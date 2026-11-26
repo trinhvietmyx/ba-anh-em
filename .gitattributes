@@ -1,0 +1,10 @@
+# Keep text files aligned with .editorconfig and Prettier on every platform.
+* text eol=lf
+
+# Preserve binary assets without line-ending conversion.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.webp binary
+*.woff binary
+*.woff2 binary
